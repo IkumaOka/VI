@@ -12,6 +12,7 @@ class VariationalGaussianMixture(object):
 
     def init_params(self, X):
         self.sample_size, self.ndim = X.shape
+        print(self.sample_size)
         self.alpha0 = np.ones(self.n_component) * self.alpha0
         self.m0 = np.zeros(self.ndim)
         self.W0 = np.eye(self.ndim)
@@ -24,6 +25,7 @@ class VariationalGaussianMixture(object):
         # ランダムにインデックスを生成
         indices = np.random.choice(self.sample_size, self.n_component, replace=False)
         self.m = X[indices].T
+        print("fdasfsa", self.m.shape)
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
 
@@ -35,6 +37,7 @@ class VariationalGaussianMixture(object):
         for i in range(iter_max):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
+            # print(r.shape)
             self.m_like_step(X, r)
             if np.allclose(params, np.hstack([array.ravel() for array in self.get_params()])):
                 break
@@ -114,6 +117,7 @@ def create_toy_data():
 
 def main():
     X = create_toy_data()
+    print(X.shape)
 
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
     model.fit(X, iter_max=100)
@@ -123,11 +127,11 @@ def main():
         np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
     X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
     probs = model.predict_dist(X_test)
-    plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
-    plt.contour(x_test, y_test, probs.reshape(100, 100))
-    plt.xlim(-10, 10)
-    plt.ylim(-10, 10)
-    plt.show()
+    # plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
+    # plt.contour(x_test, y_test, probs.reshape(100, 100))
+    # plt.xlim(-10, 10)
+    # plt.ylim(-10, 10)
+    # plt.show()
 
 
 if __name__ == '__main__':

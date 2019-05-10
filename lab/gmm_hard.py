@@ -13,12 +13,10 @@ def create_data(N, K):
         sigma_star = np.append(sigma_star, scale)
     return (X, mu_star, sigma_star)
 
-
 def gaussian(mu, sigma):
     def f(x):
         return np.exp(-0.5 * (x - mu) ** 2 / sigma) / np.sqrt(2 * np.pi * sigma)
     return f
-
 
 # 負担率を計算
 # 変分ベイズではηを計算する式
@@ -27,7 +25,6 @@ def estimate_posterior_likelihood(X, pi, gf):
     for (i, x) in enumerate(X):
         l[i, :] = pi * gf(x)
     return l * np.vectorize(lambda y: 1 / y)(l.sum(axis = 1).reshape(-1, 1))
-
 
 # 負担率の大きい方を1, 小さい方を0に値を振り直す
 def hard_cluster(gamma):
@@ -48,7 +45,6 @@ def estimate_gmm_parameter(X, gamma):
     pi = N / X.size
     return (mu, sigma, pi)
 
-
 # 対数尤度を計算
 def calc_log_likelihood(X, pi, gf):
     l = np.zeros((X.size, pi.size))
@@ -67,7 +63,6 @@ def calc_log_likelihood(X, pi, gf):
 
     return log_p
     
-
 K = 2
 N = 1000 * K
 # π,μ,σの値を初期化
@@ -76,16 +71,14 @@ pi = np.random.rand(K)
 mu = np.random.randn(K)
 sigma = np.abs(np.random.randn(K))
 X, mu_star, sigma_star = create_data(N, K)
-
 y = []
 for iter in range(1000):
     gf = gaussian(mu, sigma)
     gamma = estimate_posterior_likelihood(X, pi, gf)
     hard_gamma = hard_cluster(gamma)
-    # print("gamma:\n", gamma)
-    # print(gamma.shape)
     mu, sigma, pi = estimate_gmm_parameter(X, gamma)
     gf = gaussian(mu, sigma)
+    print(pi.shape)
     log_likelihood = calc_log_likelihood(X, pi, gf)
     print("log_likelihood: ", log_likelihood)
     y.append(log_likelihood[0])
@@ -96,32 +89,10 @@ x = np.linspace(0, 10, 1000)
 plt.plot(x, np_y)
 plt.show()
 
-
-
-
-
-
+######################################################################################################
 # ハード割り当て用の関数を作る
 # 確率的EMアルゴリズム用の関数を作る
 # データのseedを固定して何回か繰り返す
 # パラメータの初期化のseedを固定して何回か繰り返す
 # 繰り返し回数は1000回など固定する（収束するまでにしない）
 # Q関数は完全データの対数尤度を求めて期待値を計算している？→代わりに式6.5を使って対数尤度を求める？
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 変分ベイズのGMM
-
-
