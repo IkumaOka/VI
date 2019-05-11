@@ -33,7 +33,7 @@ def estimate_posterior_likelihood(X):
         eta.append(elm)
 
     eta = np.array(eta)
-    print(eta)
+    # print(eta)
     r = []
     for i in range(len(eta)):
         a = eta[i] / eta[i].sum()
@@ -43,19 +43,13 @@ def estimate_posterior_likelihood(X):
 
 # 式7.44と問7-3を計算する
 def estimate_gmm_parameter(X, r):
-    component_size = r.sum(axis=0)
-    Xm = X.T.dot(r) / component_size
-    d = X[:, :, None] - Xm
-    S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / component_size
-    alpha = alpha0 + component_size
-    beta = beta0 + component_size
-    m = (beta0 * m0[:, None] + component_size * Xm) / beta
-    d = Xm - m0[:, None]
-    W = np.linalg.inv(
-        np.linalg.inv(W0)
-        + (component_size * S).T
-        + (beta0 * component_size * np.einsum('ik,jk->ijk', d, d) / (beta0 + component_size)).T).T
-    nu = nu0 + component_size
+    m = 0
+    # 負担率の総和
+    n_j = r.sum(axis=0)
+    # 負担率による観測値の重み付き平均
+    barx_j = np.dot(X.T, r) / n_j
+    print(barx_j)
+    
 
     return m
 
@@ -90,6 +84,6 @@ xi = np.array([1.0, 0.9])
 dir_param = np.array([1.0, 0.1])
 
 r = estimate_posterior_likelihood(X)
-print(r)
+m = estimate_gmm_parameter(X, r)
 
 
