@@ -41,17 +41,22 @@ def estimate_posterior_likelihood(X):
     r = np.array(r)
     return r
 
-# 式7.44と問7-3を計算する
-def estimate_gmm_parameter(X, r):
-    m = 0
+# Mステップ
+def estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param):
     # 負担率の総和
     n_j = r.sum(axis=0)
     # 負担率による観測値の重み付き平均
     barx_j = np.dot(X.T, r) / n_j
-    print(barx_j)
-    
 
-    return m
+    # q(π)のパラメータを更新(式7.44)
+    dir_param = dir_param + n_j
+
+    #q(μ,λ)のパラメータを更新(式7.54)
+    psi = ( n_j * barx_j + beta * psi ) / ( n_j + beta )
+    beta = n_j + beta
+    kappa = n_j / 2 + kappa
+    xi = ( n_j * barx_j + (n_j * beta + ((barx_j - psi) ** 2 / (n_j + beta))) / 2 ) + xi
+    return psi, beta, kappa, xi, dir_param
 
 def calc_log_likelihood(X, pi, gf):
     l = np.zeros((X.size, pi.size))
@@ -83,7 +88,15 @@ xi = np.array([1.0, 0.9])
 # ディリクレ分布のパラメータを定義
 dir_param = np.array([1.0, 0.1])
 
-r = estimate_posterior_likelihood(X)
-m = estimate_gmm_parameter(X, r)
+for iter in range(100):
+    r = estimate_posterior_likelihood(X)
+    psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param)
+    print("psi: ", psi)
+    print("beta: ", beta)
+    print("kappa: ", kappa)
+    print("xi: ", xi)
+    print("dir_param: ", dir_param)
+    print()
+
 
 
