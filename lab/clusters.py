@@ -27,6 +27,10 @@ def estimate_posterior_likelihood(X, pi, gf):
     return l * np.vectorize(lambda y: 1 / y)(l.sum(axis = 1).reshape(-1, 1))
 
 
+def normal_cluster(gamma):
+    return gamma
+
+
 # 負担率の大きい方を1, 小さい方を0に値を振り直す
 def hard_cluster(gamma):
     max_index = np.argmax(gamma, axis=1)
@@ -51,12 +55,14 @@ def stochastic_cluster(gamma):
 
     return stochastic_gamma
 
+
 # Q関数を最大にするようなパラメータを求めてπ、μ、σを更新
 def estimate_gmm_parameter(X, gamma):
     N = gamma.sum(axis = 0)
     mu = (gamma * X.reshape((-1, 1))).sum(axis = 0) / N
     sigma = (gamma * (X.reshape(-1, 1) - mu) ** 2).sum(axis = 0) / N
     pi = N / X.size
+
     return (mu, sigma, pi)
 
 
@@ -77,9 +83,10 @@ def calc_log_likelihood(X, pi, gf):
     return log_p
     
 
-def clustering(allocation=hard_cluster):
+def clustering(allocation=normal_cluster):
     K = 2
     N = 1000 * K
+    np.random.seed(10)
     pi = np.random.rand(K)
     mu = np.random.randn(K)
     sigma = np.abs(np.random.randn(K))
@@ -89,15 +96,22 @@ def clustering(allocation=hard_cluster):
         gf = gaussian(mu, sigma)
         gamma = estimate_posterior_likelihood(X, pi, gf)
         update_gamma = allocation(gamma)
-        mu, sigma, pi = estimate_gmm_parameter(X, gamma)
+        mu, sigma, pi = estimate_gmm_parameter(X, update_gamma)
         gf = gaussian(mu, sigma)
         log_likelihood = calc_log_likelihood(X, pi, gf)
+        print(log_likelihood)
         log_likelihoods.append(log_likelihood[0])
 
-    np_log_likelihoods = np.array(log_likelihoods)
-    x = np.linspace(0, 10, 1000)
-    plt.plot(x, np_log_likelihoods)
-    plt.show()
+    log_likelihoods = np.array(log_likelihoods)
+    return log_likelihoods
 
+
+em_likelihoods = clustering()
 hard_likelihoods = clustering(hard_cluster)
 stochastic_likelihoods = clustering(stochastic_cluster)
+
+plt.plot(em_likelihoods, color='#4169e1', linestyle='solid')
+plt.plot(hard_likelihoods, color='#2971e5', linestyle='dashdot')
+plt.plot(stochastic_likelihoods, color='#ed3b3b', linestyle='dashed')
+plt.legend(['EM', 'hard_EM', 'stochastic_EM'])
+plt.show()
