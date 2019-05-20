@@ -4,14 +4,13 @@ import matplotlib.pyplot as plt
 from scipy.special import digamma, gamma
 
 def create_data(N, K):
+    loc = np.array([1.0, 3.0]) # 平均の初期値
+    scale = np.array([1.0, 2.0]) # 標準偏差の初期値
     X, mu_star, sigma_star = [], [], []
     for i in range(K):
-        loc = (np.random.rand() - 0.5) * 10.0 # range: -5.0 - 5.0
-        scale = np.random.rand() * 3.0 # range: 0.0 - 3.0
-        X = np.append(X, np.random.normal(loc = loc, scale = scale, size = int(N / K)))
-        # print(X.shape)
-        mu_star = np.append(mu_star, loc)
-        sigma_star = np.append(sigma_star, scale)
+        X = np.append(X, np.random.normal(loc = loc[i], scale = scale[i], size = int(N / K)))
+        mu_star = np.append(mu_star, loc[i])
+        sigma_star = np.append(sigma_star, scale[i])
     return (X, mu_star, sigma_star)
 
 def gaussian(mu, sigma):
@@ -72,8 +71,8 @@ def calc_log_likelihood(X, pi, gf):
     return log_p
 
 
-K = 2
-N = 1000 * K
+K = 2 # クラス数
+N = 1000 * K # データ数
 # π,μ,σの値を初期化
 pi = np.random.rand(K)
 mu = np.random.randn(K)

@@ -2,14 +2,16 @@ import numpy as np
 import sys
 import matplotlib.pyplot as plt
 
+# loc:平均, scale:標準偏差, size:出力配列のサイズ
+# for i in range(K)のところは, K=2の場合、正規分布が二つとなるデータXを生成する
 def create_data(N, K):
+    loc = np.array([1.0, 3.0]) # 平均の初期値
+    scale = np.array([1.0, 2.0]) # 標準偏差の初期値
     X, mu_star, sigma_star = [], [], []
     for i in range(K):
-        loc = (np.random.rand() - 0.5) * 10.0 # range: -5.0 - 5.0
-        scale = np.random.rand() * 3.0 # range: 0.0 - 3.0
-        X = np.append(X, np.random.normal(loc = loc, scale = scale, size = int(N / K)))
-        mu_star = np.append(mu_star, loc)
-        sigma_star = np.append(sigma_star, scale)
+        X = np.append(X, np.random.normal(loc = loc[i], scale = scale[i], size = int(N / K)))
+        mu_star = np.append(mu_star, loc[i])
+        sigma_star = np.append(sigma_star, scale[i])
     return (X, mu_star, sigma_star)
 
 
@@ -86,7 +88,7 @@ def calc_log_likelihood(X, pi, gf):
 def clustering(allocation=normal_cluster):
     K = 2
     N = 1000 * K
-    np.random.seed(10)
+    np.random.seed(11)
     pi = np.random.rand(K)
     mu = np.random.randn(K)
     sigma = np.abs(np.random.randn(K))

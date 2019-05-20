@@ -2,7 +2,9 @@ from sklearn.datasets.samples_generator import make_blobs
 import numpy as np
 from matplotlib import pyplot as plt
 
-dataset, features = make_blobs(centers=2, random_state=11)
+x = np.random.normal(1, 1, 1000)
+y = np.random.normal(4, 1, 1000)
 
-plt.scatter(dataset[:,0], dataset[:,1], c=features)
+plt.hist(x, bins=50, color="red")
+plt.hist(y, bins=50, color="blue")
 plt.show()
