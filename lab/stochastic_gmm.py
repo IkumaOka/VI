@@ -57,7 +57,8 @@ def estimate_gmm_parameter(X, gamma):
 # 対数尤度を計算
 def calc_log_likelihood(X, pi, gf):
     l = np.zeros((X.size, pi.size))
-
+    # print(X.shape)
+    # print(pi)
     for (i, x) in enumerate(X):
        l[i, :] = pi * gf(x)
 
@@ -88,18 +89,19 @@ y = []
 for iter in range(1000):
     gf = gaussian(mu, sigma)
     gamma = estimate_posterior_likelihood(X, pi, gf)
+    # print(gamma.shape)
     stochastic_gamma = stochastic_cluster(gamma)
     # print(stochastic_gamma)
     mu, sigma, pi = estimate_gmm_parameter(X, stochastic_gamma)
     gf = gaussian(mu, sigma)
     log_likelihood = calc_log_likelihood(X, pi, gf)
-    print("log_likelihood: ", log_likelihood)
+    # print("log_likelihood: ", log_likelihood)
     y.append(log_likelihood[0])
 
-np_y = np.array(y)
-x = np.linspace(0, 10, 1000)
-plt.plot(x, np_y)
-plt.show()
+# np_y = np.array(y)
+# x = np.linspace(0, 10, 1000)
+# plt.plot(x, np_y)
+# plt.show()
 
 
 

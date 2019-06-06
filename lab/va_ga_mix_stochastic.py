@@ -57,6 +57,20 @@ def estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param):
     xi = ( n_j * barx_j + (n_j * beta + ((barx_j - psi) ** 2 / (n_j + beta))) / 2 ) + xi
     return psi, beta, kappa, xi, dir_param
 
+def stochastic_cluster(gamma):
+    clusters = [0, 1]
+    stochastic_gamma = []
+    for i in range(len(gamma)):
+        p = np.random.choice(a=clusters, p=gamma[i])
+        a = np.zeros(len(gamma[i]))
+        a[p] = 1.0
+        stochastic_gamma.append(a)
+    stochastic_gamma = np.array(stochastic_gamma)
+    # print("gamma: ", gamma.shape)
+    # print("stochastic_gamma: ", stochastic_gamma.shape)
+
+    return stochastic_gamma
+
 def calc_log_likelihood(X, pi, gf):
     p_i = []
     for i in range(len(X)):
@@ -86,15 +100,11 @@ dir_param = np.array([1.0, 0.1])
 log_likelihoods = []
 for iter in range(1000):
     r = estimate_posterior_likelihood(X)
+    # 0回目だけrがマイナスになるからiter0だけstochasticの手法は使わない
+    if iter != 0:
+        r = stochastic_cluster(r)
     psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param)
-    # print("psi: ", psi)
-    # print("beta: ", beta)
-    # print("kappa: ", kappa)
-    # print("xi: ", xi)
-    # print("dir_param: ", dir_param)
-    # print()
     ave_dir_param = np.average(dir_param)
-    # print("ave_dir_param: ", ave_dir_param)
     ave_sigma = xi / kappa # 後でσを使うから期待値の逆数をとった
     gf = gaussian(psi, ave_sigma)
     log_likelihood = calc_log_likelihood(X, ave_dir_param, gf)
