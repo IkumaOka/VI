@@ -75,13 +75,17 @@ def calc_log_likelihood(X, pi, gf):
     return log_p
     
 
-def clustering(X_train, pi, mu, sigma, allocation=normal_cluster):
+def clustering(X_train, X_test, pi, mu, sigma, allocation=normal_cluster):
+    log_likelihoods = []
     for iter in range(1000):
         gf = gaussian(mu, sigma)
         gamma = estimate_posterior_likelihood(X, pi, gf)
         update_gamma = allocation(gamma)
         mu, sigma, pi = estimate_gmm_parameter(X, update_gamma)
-    return pi, mu, sigma
+        gf = gaussian(mu, sigma)
+        log_likelihood = calc_log_likelihood(X_test, pi, gf)
+        log_likelihoods.append(log_likelihood)
+    return log_likelihoods
 
 K = 2
 N = 1000 * K
@@ -96,26 +100,19 @@ kf = KFold(n_splits=5)
 print("normal_EM:")
 normal_em_log_likelihoods = []
 for X_train_index, X_test_index in kf.split(X):
-    pi, mu, sigma = clustering(X[X_train_index], pi, mu, sigma, normal_cluster)
-    print("pi: ", pi)
-    print("mu: ", mu)
-    print("sigma: ", sigma)
-    gf = gaussian(mu, sigma)
-    log_likelihood = calc_log_likelihood(X[X_test_index], pi, gf)
-    normal_em_log_likelihoods.append(log_likelihood[0])
+    log_likelihoods = clustering(X[X_train_index], X[X_test_index], pi, mu, sigma, normal_cluster)
+    log_likelihoods = np.array(log_likelihoods)
+    normal_em_log_likelihoods.append(log_likelihoods)
 
-print(mean(normal_em_log_likelihoods))
-
+normal_em_log_likelihoods = np.array(normal_em_log_likelihoods)
+print(normal_em_log_likelihoods.shape)
 print("stochastic_EM:")
 stochastic_em_log_likelihoods = []
 for X_train_index, X_test_index in kf.split(X):
-    pi, mu, sigma = clustering(X[X_train_index], pi, mu, sigma, stochastic_cluster)
-    print("pi: ", pi)
-    print("mu: ", mu)
-    print("sigma: ", sigma)
-    gf = gaussian(mu, sigma)
-    log_likelihood = calc_log_likelihood(X[X_test_index], pi, gf)
-    stochastic_em_log_likelihoods.append(log_likelihood[0])
+    log_likelihoods = clustering(X[X_train_index], X[X_test_index], pi, mu, sigma, stochastic_cluster)
+    log_likelihoods = np.array(log_likelihoods)
+    stochastic_em_log_likelihoods.append(log_likelihoods)
 
-print(mean(stochastic_em_log_likelihoods))
+stochastic_em_log_likelihoods = np.array(stochastic_em_log_likelihoods)
+print(stochastic_em_log_likelihoods.shape)
 
