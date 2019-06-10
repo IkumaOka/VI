@@ -1,7 +1,10 @@
 # ノーマルEMとSEMのみ（ハードクラスタリングはしない）
+# データの8割をテストデータとしてパラメータを推定し、残りの2割を使って尤度を計算
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 
 # loc:平均, scale:標準偏差, size:出力配列のサイズ
 # for i in range(K)のところは, K=2の場合、正規分布が二つとなるデータXを生成する
@@ -79,35 +82,11 @@ def clustering(allocation=normal_cluster):
     pi = np.random.rand(K)
     mu = np.random.randn(K)
     sigma = np.abs(np.random.randn(K))
-    print("pi0: ", pi)
-    print("mu0: ", mu)
-    print("sigma0: ", sigma)
     X, mu_star, sigma_star = create_data(N, K)
-    print("mu_star: ", mu_star)
-    print("sigma_star: ", sigma_star)
-    log_likelihoods = []
-    for iter in range(1000):
-        gf = gaussian(mu, sigma)
-        gamma = estimate_posterior_likelihood(X, pi, gf)
-        update_gamma = allocation(gamma)
-        mu, sigma, pi = estimate_gmm_parameter(X, update_gamma)
-        gf = gaussian(mu, sigma)
-        log_likelihood = calc_log_likelihood(X, pi, gf)
-        # print(log_likelihood)
-        log_likelihoods.append(log_likelihood[0])
+    kf = KFold(n_splits=5)
+    for X_train_index, X_test_index in kf.split(X):
+        print(X[X_train_index].shape)
+    return 0
 
-    log_likelihoods = np.array(log_likelihoods)
-    print("pi: ", pi)
-    print("mu: ", mu)
-    print("sigma: ", sigma)
-    return log_likelihoods
 
-print("em_likelihoods:")
-em_likelihoods = clustering()
-print("stochastic_likelihoods:")
-stochastic_likelihoods = clustering(stochastic_cluster)
-
-plt.plot(em_likelihoods, color='#4169e1', linestyle='solid')
-plt.plot(stochastic_likelihoods, color='#ed3b3b', linestyle='dashed')
-plt.legend(['EM', 'stochastic_EM'])
-plt.show()
+d = clustering()

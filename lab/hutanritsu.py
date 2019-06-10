@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from scipy.special import digamma, gamma
 
 def create_data(N, K):
-    loc = np.array([5.0, 10.0]) # 平均の初期値
-    scale = np.array([1.0, 2.0]) # 標準偏差の初期値
+    loc = np.array([1.0, 1.0]) # 平均の初期値
+    scale = np.array([3.0, 2.0]) # 標準偏差の初期値
     X, mu_star, sigma_star = [], [], []
     for i in range(K):
         X = np.append(X, np.random.normal(loc = loc[i], scale = scale[i], size = int(N / K)))

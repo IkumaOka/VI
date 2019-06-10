@@ -1,7 +1,10 @@
 # ノーマルEMとSEMのみ（ハードクラスタリングはしない）
+# データの8割をテストデータとしてパラメータを推定し、残りの2割を使って尤度を計算
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+from statistics import mean
 
 # loc:平均, scale:標準偏差, size:出力配列のサイズ
 # for i in range(K)のところは, K=2の場合、正規分布が二つとなるデータXを生成する
@@ -72,42 +75,47 @@ def calc_log_likelihood(X, pi, gf):
     return log_p
     
 
-def clustering(allocation=normal_cluster):
-    K = 2
-    N = 1000 * K
-    np.random.seed(23)
-    pi = np.random.rand(K)
-    mu = np.random.randn(K)
-    sigma = np.abs(np.random.randn(K))
-    print("pi0: ", pi)
-    print("mu0: ", mu)
-    print("sigma0: ", sigma)
-    X, mu_star, sigma_star = create_data(N, K)
-    print("mu_star: ", mu_star)
-    print("sigma_star: ", sigma_star)
-    log_likelihoods = []
+def clustering(X_train, pi, mu, sigma, allocation=normal_cluster):
     for iter in range(1000):
         gf = gaussian(mu, sigma)
         gamma = estimate_posterior_likelihood(X, pi, gf)
         update_gamma = allocation(gamma)
         mu, sigma, pi = estimate_gmm_parameter(X, update_gamma)
-        gf = gaussian(mu, sigma)
-        log_likelihood = calc_log_likelihood(X, pi, gf)
-        # print(log_likelihood)
-        log_likelihoods.append(log_likelihood[0])
+    return pi, mu, sigma
 
-    log_likelihoods = np.array(log_likelihoods)
+K = 2
+N = 1000 * K
+pi = np.random.rand(K)
+mu = np.random.randn(K)
+sigma = np.abs(np.random.randn(K))
+print("pi0: ", pi)
+print("mu0: ", mu)
+print("sigma0: ", sigma)
+X, mu_star, sigma_star = create_data(N, K)
+kf = KFold(n_splits=5)
+print("normal_EM:")
+normal_em_log_likelihoods = []
+for X_train_index, X_test_index in kf.split(X):
+    pi, mu, sigma = clustering(X[X_train_index], pi, mu, sigma, normal_cluster)
     print("pi: ", pi)
     print("mu: ", mu)
     print("sigma: ", sigma)
-    return log_likelihoods
+    gf = gaussian(mu, sigma)
+    log_likelihood = calc_log_likelihood(X[X_test_index], pi, gf)
+    normal_em_log_likelihoods.append(log_likelihood[0])
 
-print("em_likelihoods:")
-em_likelihoods = clustering()
-print("stochastic_likelihoods:")
-stochastic_likelihoods = clustering(stochastic_cluster)
+print(mean(normal_em_log_likelihoods))
 
-plt.plot(em_likelihoods, color='#4169e1', linestyle='solid')
-plt.plot(stochastic_likelihoods, color='#ed3b3b', linestyle='dashed')
-plt.legend(['EM', 'stochastic_EM'])
-plt.show()
+print("stochastic_EM:")
+stochastic_em_log_likelihoods = []
+for X_train_index, X_test_index in kf.split(X):
+    pi, mu, sigma = clustering(X[X_train_index], pi, mu, sigma, stochastic_cluster)
+    print("pi: ", pi)
+    print("mu: ", mu)
+    print("sigma: ", sigma)
+    gf = gaussian(mu, sigma)
+    log_likelihood = calc_log_likelihood(X[X_test_index], pi, gf)
+    stochastic_em_log_likelihoods.append(log_likelihood[0])
+
+print(mean(stochastic_em_log_likelihoods))
+
