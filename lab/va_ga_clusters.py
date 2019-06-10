@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.special import digamma, gamma
 
 def create_data(N, K):
-    loc = np.array([1.0, 3.0]) # 平均の初期値
+    loc = np.array([5.0, 10.0]) # 平均の初期値
     scale = np.array([1.0, 2.0]) # 標準偏差の初期値
     X, mu_star, sigma_star = [], [], []
     for i in range(K):
@@ -23,17 +23,19 @@ def gaussian(mu, sigma):
 # 負担率を計算
 # ηを計算する式（式7.29参照）PRMLだと式10.46
 # 式7.29第1項において、多変量では正規-ウィシャート分布を使うが、一変量の場合は正規-ガンマ分布を使う
-def estimate_posterior_likelihood(X, psi, beta, kappa, xi, dir_param):
+def calc_r(X, psi, beta, kappa, xi, dir_param):
     # 正規-ガンマ分布の期待値を求める(wiki参照)
     ex_T = kappa / xi
     ex_T_X = psi * kappa / xi
     ex_T_X_2 = (1 / beta) + (psi ** 2) * kappa / xi
-    eta = []
+    log_eta = []
     for i in range(len(X)):
         elm = ( (X[i]**2)*ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param)- digamma(dir_param.sum(axis=0))
-        eta.append(elm)
-
+        log_eta.append(elm)
+    log_eta = np.array(log_eta)
+    eta = np.exp(log_eta)
     eta = np.array(eta)
+    # print(eta)
     r = []
     for i in range(len(eta)):
         a = eta[i] / eta[i].sum()
@@ -102,18 +104,22 @@ def clustering(allocation=normal_cluster):
     kappa = np.array([1.0, 0.9])
     xi = np.array([1.0, 0.9])
     # ディリクレ分布のパラメータを定義
-    dir_param = np.array([1.0, 0.1])
+    dir_param = np.array([1.0, 1.0])
     log_likelihoods = []
     for iter in range(1000):
-        gamma = estimate_posterior_likelihood(X, psi, beta, kappa, xi, dir_param)
-        if iter != 0 and iter != 1:
-            r = allocation(gamma)
-        psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(X, gamma, psi, beta, kappa, xi, dir_param)
+        gamma = calc_r(X, psi, beta, kappa, xi, dir_param)
+        r = allocation(gamma)
+        if iter == 0 or iter == 999:
+            print(r)
+            print("psi: ", psi)
+            print("beta: ", beta)
+            print("kappa", kappa)
+        psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param)
         ave_dir_param = np.average(dir_param)
         ave_sigma = xi / kappa # 後でσを使うから期待値の逆数をとった
         gf = gaussian(psi, ave_sigma)
         log_likelihood = calc_log_likelihood(X, ave_dir_param, gf)
-        print(log_likelihood)
+        # print(log_likelihood)
         log_likelihoods.append(log_likelihood)
 
     log_likelihoods = np.array(log_likelihoods)

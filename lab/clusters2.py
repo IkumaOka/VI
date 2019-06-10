@@ -1,3 +1,4 @@
+# ノーマルEMとSEMのみ（ハードクラスタリングはしない）
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -33,17 +34,6 @@ def normal_cluster(gamma):
     return gamma
 
 
-# 負担率の大きい方を1, 小さい方を0に値を振り直す
-def hard_cluster(gamma):
-    max_index = np.argmax(gamma, axis=1)
-    min_index = np.argmin(gamma, axis=1)
-    for i in range(len(gamma)):
-        gamma[i][max_index[i]] = 1
-        gamma[i][min_index[i]] = 0
-
-    return gamma
-
-
 # 負担率は確率分布で、その確率分布に従うコインを投げて0か1を代入
 def stochastic_cluster(gamma):
     clusters = [0, 1]
@@ -54,7 +44,6 @@ def stochastic_cluster(gamma):
         a[p] = 1.0
         stochastic_gamma.append(a)
     stochastic_gamma = np.array(stochastic_gamma)
-
     return stochastic_gamma
 
 
@@ -64,7 +53,6 @@ def estimate_gmm_parameter(X, gamma):
     mu = (gamma * X.reshape((-1, 1))).sum(axis = 0) / N
     sigma = (gamma * (X.reshape(-1, 1) - mu) ** 2).sum(axis = 0) / N
     pi = N / X.size
-
     return (mu, sigma, pi)
 
 
@@ -81,7 +69,6 @@ def calc_log_likelihood(X, pi, gf):
     log_p = log_p_i.sum(axis=0)
     # xのsumを求める
     p = p_i.sum(axis=0)
-
     return log_p
     
 
@@ -110,11 +97,9 @@ def clustering(allocation=normal_cluster):
 
 
 em_likelihoods = clustering()
-hard_likelihoods = clustering(hard_cluster)
 stochastic_likelihoods = clustering(stochastic_cluster)
 
 plt.plot(em_likelihoods, color='#4169e1', linestyle='solid')
-plt.plot(hard_likelihoods, color='#2971e5', linestyle='dashdot')
 plt.plot(stochastic_likelihoods, color='#ed3b3b', linestyle='dashed')
 plt.legend(['EM', 'hard_EM', 'stochastic_EM'])
 plt.show()

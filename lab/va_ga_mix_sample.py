@@ -57,6 +57,7 @@ class VariationalGaussianMixture(object):
                 axis=1)
         )
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
+        print(self.nu)
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
         r = pi * np.sqrt(Lambda) * gauss
         r /= np.sum(r, axis=-1, keepdims=True)
@@ -117,10 +118,9 @@ def create_toy_data():
 
 def main():
     X = create_toy_data()
-    print(X.shape)
 
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.fit(X, iter_max=100)
+    model.fit(X, iter_max=1000)
     labels = model.classify(X)
 
     x_test, y_test = np.meshgrid(

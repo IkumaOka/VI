@@ -26,11 +26,12 @@ def estimate_posterior_likelihood(X):
     ex_T = kappa / xi
     ex_T_X = psi * kappa / xi
     ex_T_X_2 = (1 / beta) + (psi ** 2) * kappa / xi
-    eta = []
+    log_eta = []
     for i in range(len(X)):
         elm = ( (X[i]**2)*ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param)- digamma(dir_param.sum(axis=0))
-        eta.append(elm)
-
+        log_eta.append(elm)
+    log_eta = np.array(log_eta)
+    eta = np.exp(log_eta)
     eta = np.array(eta)
     # print(eta)
     r = []
@@ -44,7 +45,6 @@ def estimate_posterior_likelihood(X):
 def estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param):
     # 負担率の総和
     n_j = r.sum(axis=0)
-    print(n_j.shape)
     # 負担率による観測値の重み付き平均
     barx_j = np.dot(X.T, r) / n_j
 
@@ -87,6 +87,7 @@ dir_param = np.array([1.0, 0.1])
 log_likelihoods = []
 for iter in range(1000):
     r = estimate_posterior_likelihood(X)
+    print(r)
     psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param)
     # print("psi: ", psi)
     # print("beta: ", beta)

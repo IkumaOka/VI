@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.special import digamma, gamma
 
 def create_data(N, K):
-    loc = np.array([1.0, 3.0]) # 平均の初期値
+    loc = np.array([5.0, 10.0]) # 平均の初期値
     scale = np.array([1.0, 2.0]) # 標準偏差の初期値
     X, mu_star, sigma_star = [], [], []
     for i in range(K):
@@ -28,7 +28,7 @@ def estimate_posterior_likelihood(X):
     ex_T_X_2 = 1 / beta + psi ** 2 * kappa / xi
     eta = []
     for i in range(len(X)):
-        elm = ( X[i]*ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param)- digamma(dir_param.sum(axis=0))
+        elm = ( (X[i]**2)*ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param)- digamma(dir_param.sum(axis=0))
         eta.append(elm)
 
     eta = np.array(eta)
@@ -66,9 +66,6 @@ def stochastic_cluster(gamma):
         a[p] = 1.0
         stochastic_gamma.append(a)
     stochastic_gamma = np.array(stochastic_gamma)
-    # print("gamma: ", gamma.shape)
-    # print("stochastic_gamma: ", stochastic_gamma.shape)
-
     return stochastic_gamma
 
 def calc_log_likelihood(X, pi, gf):
@@ -96,13 +93,11 @@ beta = np.array([1.0, 0.9])
 kappa = np.array([1.0, 0.9])
 xi = np.array([1.0, 0.9])
 # ディリクレ分布のパラメータを定義
-dir_param = np.array([1.0, 0.1])
+dir_param = np.array([1.0, 1.0])
 log_likelihoods = []
 for iter in range(1000):
     r = estimate_posterior_likelihood(X)
-    # 0回目だけrがマイナスになるからiter0だけstochasticの手法は使わない
-    if iter != 0:
-        r = stochastic_cluster(r)
+    r = stochastic_cluster(r)
     psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param)
     ave_dir_param = np.average(dir_param)
     ave_sigma = xi / kappa # 後でσを使うから期待値の逆数をとった
