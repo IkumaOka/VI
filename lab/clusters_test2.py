@@ -78,7 +78,7 @@ def calc_log_likelihood(X, pi, gf):
 def clustering(allocation=normal_cluster):
     K = 2
     N = 1000 * K
-    np.random.seed(23)
+    np.random.seed(61)
     pi = np.random.rand(K)
     mu = np.random.randn(K)
     sigma = np.abs(np.random.randn(K))
@@ -86,7 +86,7 @@ def clustering(allocation=normal_cluster):
     print("mu0: ", mu)
     print("sigma0: ", sigma)
     X, mu_star, sigma_star = create_data(N, K)
-    X_train, X_test = train_test_split(X, train_size=0.8, random_state=1)
+    X_train, X_test = train_test_split(X, train_size=0.8)
     print("mu_star: ", mu_star)
     print("sigma_star: ", sigma_star)
     log_likelihoods = []
