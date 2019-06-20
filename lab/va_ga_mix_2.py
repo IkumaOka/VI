@@ -78,8 +78,8 @@ def calc_log_likelihood(X, psi, beta, kappa, xi, r):
     print(log_likelihood)
     return log_likelihood
 
-# np.random.seed(19)
-K = 2 # クラス数
+np.random.seed(19)
+K = 2 # クラス数 
 N = 1000 * K # データ数
 # π,μ,σの値を初期化
 pi = np.random.rand(K)
