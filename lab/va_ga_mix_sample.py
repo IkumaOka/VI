@@ -12,7 +12,7 @@ class VariationalGaussianMixture(object):
 
     def init_params(self, X):
         self.sample_size, self.ndim = X.shape
-        print(self.sample_size)
+        # print(self.sample_size)
         self.alpha0 = np.ones(self.n_component) * self.alpha0
         self.m0 = np.zeros(self.ndim)
         self.W0 = np.eye(self.ndim)
@@ -25,7 +25,7 @@ class VariationalGaussianMixture(object):
         # ランダムにインデックスを生成
         indices = np.random.choice(self.sample_size, self.n_component, replace=False)
         self.m = X[indices].T
-        print("fdasfsa", self.m.shape)
+        # print("fdasfsa", self.m.shape)
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
 
@@ -37,7 +37,9 @@ class VariationalGaussianMixture(object):
         for i in range(iter_max):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
-            # print(r.shape)
+            if i == 0 or i == 20:
+                print(i)
+                print(r)
             self.m_like_step(X, r)
             if np.allclose(params, np.hstack([array.ravel() for array in self.get_params()])):
                 break
@@ -57,7 +59,7 @@ class VariationalGaussianMixture(object):
                 axis=1)
         )
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
-        print(self.nu)
+        # print(self.nu)
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
         r = pi * np.sqrt(Lambda) * gauss
         r /= np.sum(r, axis=-1, keepdims=True)

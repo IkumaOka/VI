@@ -28,7 +28,7 @@ def estimate_posterior_likelihood(X):
     ex_T_X_2 = (1 / beta) + (psi ** 2) * kappa / xi
     log_eta = []
     for i in range(len(X)):
-        elm = ( (X[i]**2)*ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param)- digamma(dir_param.sum(axis=0))
+        elm = ( (X[i]**2 )*ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param)- digamma(dir_param.sum(axis=0))
         log_eta.append(elm)
     log_eta = np.array(log_eta)
     eta = np.exp(log_eta)
@@ -68,7 +68,7 @@ def calc_log_likelihood(X, pi, gf):
     log_p = np.log(p)
     return log_p
 
-np.random.seed(19)
+# np.random.seed(19)
 K = 2 # クラス数
 N = 1000 * K # データ数
 # π,μ,σの値を初期化
@@ -85,7 +85,7 @@ xi = np.array([1.0, 0.9])
 # ディリクレ分布のパラメータを定義
 dir_param = np.array([1.0, 0.1])
 log_likelihoods = []
-for iter in range(1000):
+for iter in range(10000):
     r = estimate_posterior_likelihood(X)
     print(r)
     psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param)
