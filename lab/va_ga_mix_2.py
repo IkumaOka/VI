@@ -45,7 +45,7 @@ def estimate_posterior_likelihood(X, psi, beta, kappa, xi, dir_param):
     return r
 
 # Mステップ
-def estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param):
+def estimate_gmm_parameter(X, r, u_psi, u_beta, u_kappa, u_xi, u_dir_param):
     # 負担率の総和
     n_j = r.sum(axis=0)
     # 負担率による観測値の重み付き平均
@@ -62,7 +62,7 @@ def estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param):
     u_xi = ( n_j * barx_j + (n_j * beta + ((barx_j - psi) ** 2 / (n_j + beta))) / 2 ) + xi
     return u_psi, u_beta, u_kappa, u_xi, u_dir_param
 
-def calc_log_likelihood(X, psi, beta, kappa, xi, r):
+def calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r):
     log_likelihood = 0.0
     for i in range(len(X)):
         diff = X[i] - psi
@@ -73,7 +73,7 @@ def calc_log_likelihood(X, psi, beta, kappa, xi, r):
         elm4 = (kappa + 0.5) * log_u
         elm5 = loggamma(kappa + 0.5) - loggamma(kappa)
         s = elm1 + elm2 + elm3 - elm4 + elm5
-        # print(s.shape)
+        # print(s)
         log_likelihood += logsumexp(s)
     print(log_likelihood)
     return log_likelihood
@@ -102,14 +102,14 @@ u_dir_param = dir_param
 log_likelihoods = []
 for iter in range(1000):
     r = estimate_posterior_likelihood(X, u_psi, u_beta, u_kappa, u_xi, u_dir_param)
-    u_psi, u_beta, u_kappa, u_xi, u_dir_param = estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param)
+    u_psi, u_beta, u_kappa, u_xi, u_dir_param = estimate_gmm_parameter(X, r, u_psi, u_beta, u_kappa, u_xi, u_dir_param)
     ave_dir_param = np.average(u_dir_param)
     ave_sigma = u_xi / u_kappa # 後でσを使うから期待値の逆数をとった
     gf = gaussian(u_psi, ave_sigma)
     log_likelihood = calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r)
     # print(log_likelihood)
     log_likelihoods.append(log_likelihood)
-    print(u_psi)
+    # print(u_psi)
 
 log_likelihoods = np.array(log_likelihoods)
 
