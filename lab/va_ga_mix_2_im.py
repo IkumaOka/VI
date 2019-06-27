@@ -33,18 +33,9 @@ def calc_r(X, psi, beta, kappa, xi, dir_param):
     ex_T = kappa / xi
     ex_T_X = psi * kappa / xi
     ex_T_X_2 = 1 / beta + psi ** 2 * kappa / xi
-    log_eta = []
-    for i in range(len(X)):
-        elm = - ( X[i]**2 * ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param) - digamma(dir_param.sum(axis=0))
-        log_eta.append(elm)
-
-    log_eta = np.array(log_eta)
-    eta = np.exp(log_eta)
-    r = []
-    for i in range(len(eta)):
-        a = eta[i] / eta[i].sum()
-        r.append(a)
-    r = np.array(r)
+    log_eta = - (np.tile(X**2, (2, 1)) * ex_T.reshape((2, 1)) - 2*np.tile(X, (2, 1))*ex_T_X.reshape((2, 1)) + ex_T_X_2.reshape((2, 1))) / 2 + digamma(dir_param).reshape((2, 1)) - digamma(dir_param.sum(axis=0))
+    eta = np.exp(log_eta.T)
+    r = eta / np.tile(eta.sum(axis=1), (2, 1)).T
     return r
 
 
@@ -66,7 +57,7 @@ def estimate_gmm_parameter(X, r, u_psi, u_beta, u_kappa, u_xi, u_dir_param):
     u_psi = ( n_j * barx_j + beta * psi ) / ( n_j + beta )
     u_beta = n_j + beta
     u_kappa = n_j / 2 + kappa
-    u_xi = ( n_j * s_j + (n_j * beta * ((barx_j - psi) ** 2 / (n_j + beta))) ) / 2 + xi
+    u_xi = ( n_j * s_j + (n_j * beta * ((barx_j - psi) ** 2 / (n_j + beta)))) / 2 + xi
     return u_psi, u_beta, u_kappa, u_xi, u_dir_param
 
 
@@ -83,19 +74,6 @@ def calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r):
     for i in range(len(s)):
         log_likelihood += logsumexp(s[i])
     print(log_likelihood)
-    # print("adafd", s.shape)
-    # for i in range(len(X)):
-    #     diff = X[i] - psi
-    #     # print(diff.shape)
-    #     log_u = np.log(u_beta * diff**2 / (2 * (1 + u_beta)) + u_xi)
-    #     elm1 = np.log(r[i])
-    #     elm2 = np.log(u_beta / (2 * math.pi * (1 + u_beta))) / 2
-    #     elm3 = u_kappa * np.log(u_xi)
-    #     elm4 = (u_kappa + 0.5) * log_u
-    #     elm5 = loggamma(u_kappa + 0.5) - loggamma(u_kappa)
-    #     s = elm1 + elm2 + elm3 - elm4 + elm5
-    #     log_likelihood += logsumexp(s)
-    # print(log_likelihood)
     return log_likelihood
 
 
@@ -129,7 +107,7 @@ for iter in range(1000):
     gf = gaussian(u_psi, ave_sigma)
     log_likelihood = calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r)
     log_likelihoods.append(log_likelihood)
-    print(u_psi)
+    # print(u_psi)
 
 log_likelihoods = np.array(log_likelihoods)
 
