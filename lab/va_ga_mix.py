@@ -33,7 +33,6 @@ def estimate_posterior_likelihood(X):
     log_eta = np.array(log_eta)
     eta = np.exp(log_eta)
     eta = np.array(eta)
-    # print(eta)
     r = []
     for i in range(len(eta)):
         a = eta[i] / eta[i].sum()

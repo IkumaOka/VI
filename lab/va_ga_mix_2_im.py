@@ -1,3 +1,5 @@
+# プログラムの高速化目当て
+# 本体はva_ga_mix_2.py
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -52,7 +54,7 @@ def estimate_gmm_parameter(X, r, u_psi, u_beta, u_kappa, u_xi, u_dir_param):
     n_j = r.sum(axis=0)
     # 負担率による観測値の重み付き平均
     barx_j = np.dot(X.T, r) / n_j
-    s = (np.tile(X, (2, 1)) - barx_j.reshape((2, 1)))
+    s = np.tile(X, (2, 1)) - barx_j.reshape((2, 1))
     s_ = s**2
     # 観測値の重み付き分散
     s_j = (s_.T * r).sum(axis=0) / n_j
@@ -70,17 +72,30 @@ def estimate_gmm_parameter(X, r, u_psi, u_beta, u_kappa, u_xi, u_dir_param):
 
 def calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r):
     log_likelihood = 0.0
-    for i in range(len(X)):
-        diff = X[i] - psi
-        log_u = np.log(u_beta * diff**2 / (2 * (1 + u_beta)) + u_xi)
-        elm1 = np.log(r[i])
-        elm2 = np.log(u_beta / (2 * math.pi * (1 + u_beta))) / 2
-        elm3 = u_kappa * np.log(u_xi)
-        elm4 = (u_kappa + 0.5) * log_u
-        elm5 = loggamma(u_kappa + 0.5) - loggamma(u_kappa)
-        s = elm1 + elm2 + elm3 - elm4 + elm5
-        log_likelihood += logsumexp(s)
+    diff = np.tile(X, (2, 1)) - psi.reshape((2, 1))
+    log_u = np.log(u_beta * diff.T**2 / (2 * (1 + u_beta)) + u_xi)
+    elm1 = np.log(r)
+    elm2 = np.log(u_beta / (2 * math.pi * (1 + u_beta))) / 2
+    elm3 = u_kappa * np.log(u_xi)
+    elm4 = (u_kappa + 0.5) * log_u
+    elm5 = loggamma(u_kappa + 0.5) - loggamma(u_kappa)
+    s = elm1 + elm2 + elm3 - elm4 + elm5
+    for i in range(len(s)):
+        log_likelihood += logsumexp(s[i])
     print(log_likelihood)
+    # print("adafd", s.shape)
+    # for i in range(len(X)):
+    #     diff = X[i] - psi
+    #     # print(diff.shape)
+    #     log_u = np.log(u_beta * diff**2 / (2 * (1 + u_beta)) + u_xi)
+    #     elm1 = np.log(r[i])
+    #     elm2 = np.log(u_beta / (2 * math.pi * (1 + u_beta))) / 2
+    #     elm3 = u_kappa * np.log(u_xi)
+    #     elm4 = (u_kappa + 0.5) * log_u
+    #     elm5 = loggamma(u_kappa + 0.5) - loggamma(u_kappa)
+    #     s = elm1 + elm2 + elm3 - elm4 + elm5
+    #     log_likelihood += logsumexp(s)
+    # print(log_likelihood)
     return log_likelihood
 
 
