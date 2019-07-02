@@ -33,7 +33,10 @@ def calc_r(X, psi, beta, kappa, xi, dir_param):
     ex_T = kappa / xi
     ex_T_X = psi * kappa / xi
     ex_T_X_2 = 1 / beta + psi ** 2 * kappa / xi
-    log_eta = - (np.tile(X**2, (2, 1)) * ex_T.reshape((2, 1)) - 2*np.tile(X, (2, 1))*ex_T_X.reshape((2, 1)) + ex_T_X_2.reshape((2, 1))) / 2 + digamma(dir_param).reshape((2, 1)) - digamma(dir_param.sum(axis=0))
+    log_eta = - (np.tile(X**2, (2, 1)) * ex_T.reshape((2, 1)) \
+                - 2*np.tile(X, (2, 1))*ex_T_X.reshape((2, 1)) \
+                + ex_T_X_2.reshape((2, 1))) / 2 \
+                + digamma(dir_param).reshape((2, 1)) - digamma(dir_param.sum(axis=0))
     eta = np.exp(log_eta.T)
     r = eta / np.tile(eta.sum(axis=1), (2, 1)).T
     return r
@@ -77,7 +80,7 @@ def calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r):
     return log_likelihood
 
 
-np.random.seed(19)
+np.random.seed(20)
 K = 2 # クラス数 
 N = 1000 * K # データ数
 # π,μ,σの値を初期化

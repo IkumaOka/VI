@@ -1,5 +1,4 @@
-# プログラムの高速化目当て
-# 本体はva_ga_mix_2.py
+# 対数尤度が点推定version
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -34,9 +33,9 @@ def calc_r(X, psi, beta, kappa, xi, dir_param):
     ex_T_X = psi * kappa / xi
     ex_T_X_2 = 1 / beta + psi ** 2 * kappa / xi
     log_eta = - (np.tile(X**2, (2, 1)) * ex_T.reshape((2, 1)) \
-                    - 2*np.tile(X, (2, 1))*ex_T_X.reshape((2, 1)) \
-                    + ex_T_X_2.reshape((2, 1))) / 2 \
-                    + digamma(dir_param).reshape((2, 1)) - digamma(dir_param.sum(axis=0))
+                - 2*np.tile(X, (2, 1))*ex_T_X.reshape((2, 1)) \
+                + ex_T_X_2.reshape((2, 1))) / 2 \
+                + digamma(dir_param).reshape((2, 1)) - digamma(dir_param.sum(axis=0))
     eta = np.exp(log_eta.T)
     r = eta / np.tile(eta.sum(axis=1), (2, 1)).T
     return r
@@ -63,42 +62,21 @@ def estimate_gmm_parameter(X, r, u_psi, u_beta, u_kappa, u_xi, u_dir_param):
     u_xi = ( n_j * s_j + (n_j * beta * ((barx_j - psi) ** 2 / (n_j + beta)))) / 2 + xi
     return u_psi, u_beta, u_kappa, u_xi, u_dir_param
 
-def stochastic_cluster(r):
-    clusters = [0, 1]
-    stochastic_r = []
-    for i in range(len(r)):
-        p = np.random.choice(a=clusters, p=r[i])
-        a = np.zeros(len(r[i]))
-        a[p] = 1.0
-        stochastic_r.append(a)
-    stochastic_r = np.array(stochastic_r)
-    return stochastic_r
 
-
-def calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r):
-    log_likelihood = 0.0
-    diff = np.tile(X, (2, 1)) - psi.reshape((2, 1))
-    log_u = np.log(u_beta * diff.T**2 / (2 * (1 + u_beta)) + u_xi)
-    elm1 = np.log(r)
-    elm2 = np.log(u_beta / (2 * math.pi * (1 + u_beta))) / 2
-    elm3 = u_kappa * np.log(u_xi)
-    elm4 = (u_kappa + 0.5) * log_u
-    elm5 = loggamma(u_kappa + 0.5) - loggamma(u_kappa)
-    s = elm1 + elm2 + elm3 - elm4 + elm5
-    for i in range(len(s)):
-        log_likelihood += logsumexp(s[i])
-    print(log_likelihood)
+def calc_log_likelihood(X, pi, gf):
+    p_i = []
+    for i in range(len(X)):
+        value = pi * gf(X[i])
+        p_i.append(value)
+    p_i = np.array(p_i)
+    p = np.sum(p_i)
+    log_likelihood = np.log(p)
     return log_likelihood
 
 
-np.random.seed(20)
+np.random.seed(22)
 K = 2 # クラス数 
 N = 1000 * K # データ数
-# π,μ,σの値を初期化
-pi = np.random.rand(K)
-mu = np.random.randn(K)
-sigma = np.abs(np.random.randn(K))
-lamda = 1.0 / sigma
 X, mu_star, sigma_star = create_data(N, K)
 # 正規-ガンマ分布のパラメータを定義
 psi = np.array([-1.0, 7.0])
@@ -115,13 +93,12 @@ u_dir_param = dir_param
 log_likelihoods = []
 for iter in range(1000):
     r = calc_r(X, u_psi, u_beta, u_kappa, u_xi, u_dir_param)
-    stochastic_r = stochastic_cluster(r)
-    # print(stochastic_r)
-    u_psi, u_beta, u_kappa, u_xi, u_dir_param = estimate_gmm_parameter(X, stochastic_r, u_psi, u_beta, u_kappa, u_xi, u_dir_param)
+    u_psi, u_beta, u_kappa, u_xi, u_dir_param = estimate_gmm_parameter(X, r, u_psi, u_beta, u_kappa, u_xi, u_dir_param)
     ave_dir_param = np.average(u_dir_param)
     ave_sigma = u_xi / u_kappa # 後でσを使うから期待値の逆数をとった
     gf = gaussian(u_psi, ave_sigma)
-    log_likelihood = calc_log_likelihood(X, u_psi, u_beta, u_kappa, u_xi, r)
+    log_likelihood = calc_log_likelihood(X, ave_dir_param, gf)
+    print(log_likelihood)
     log_likelihoods.append(log_likelihood)
     # print(u_psi)
 

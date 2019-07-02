@@ -1,10 +1,9 @@
-# ノーマルEMとSEMのみ（ハードクラスタリングはしない）
-# データの8割をテストデータとしてパラメータを推定し、残りの2割を使って尤度を計算
+# Kfoldを使ってクロスバリデーション
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
+from statistics import mean
 
 # loc:平均, scale:標準偏差, size:出力配列のサイズ
 # for i in range(K)のところは, K=2の場合、正規分布が二つとなるデータXを生成する
@@ -75,20 +74,7 @@ def calc_log_likelihood(X, pi, gf):
     return log_p
     
 
-def clustering(allocation=normal_cluster):
-    K = 2
-    N = 1000 * K
-    np.random.seed(61)
-    pi = np.random.rand(K)
-    mu = np.random.randn(K)
-    sigma = np.abs(np.random.randn(K))
-    print("pi0: ", pi)
-    print("mu0: ", mu)
-    print("sigma0: ", sigma)
-    X, mu_star, sigma_star = create_data(N, K)
-    X_train, X_test = train_test_split(X, train_size=0.8)
-    print("mu_star: ", mu_star)
-    print("sigma_star: ", sigma_star)
+def clustering(X_train, X_test, pi, mu, sigma, allocation=normal_cluster):
     log_likelihoods = []
     for iter in range(1000):
         gf = gaussian(mu, sigma)
@@ -98,14 +84,54 @@ def clustering(allocation=normal_cluster):
         gf = gaussian(mu, sigma)
         log_likelihood = calc_log_likelihood(X_test, pi, gf)
         log_likelihoods.append(log_likelihood)
-    return log_likelihoods
+    return log_likelihoods, pi, mu, sigma
 
+np.random.seed(0)
+K = 2
+N = 1000 * K
+pi = np.random.rand(K)
+mu = np.random.randn(K)
+sigma = np.abs(np.random.randn(K))
+print("pi0: ", pi)
+print("mu0: ", mu)
+print("sigma0: ", sigma)
+X, mu_star, sigma_star = create_data(N, K)
+kf = KFold(n_splits=5)
 print("normal_EM:")
-em_log_likelihoods = clustering()
-print("stochastic_EM log_likelihood:")
-stochastic_log_likelihoods = clustering(stochastic_cluster)
+normal_em_log_likelihoods = []
+# クロスバリデーション(5分割)を用いる
+i = 1
+for X_train_index, X_test_index in kf.split(X):
+    log_likelihoods, pi, mu, sigma = clustering(X[X_train_index], X[X_test_index], pi, mu, sigma, normal_cluster)
+    log_likelihoods = np.array(log_likelihoods)
+    normal_em_log_likelihoods.append(log_likelihoods)
+    # 1000回更新後、パラメータがどのような値になったかを表示
+    print("pi", i, ": ", pi )
+    print("mu", i, ": ", mu )
+    print("sigma", i, ": ", sigma )
+    i += 1
+normal_em_log_likelihoods = np.array(normal_em_log_likelihoods)
 
-plt.plot(em_log_likelihoods, color='#4169e1', linestyle='solid')
-plt.plot(stochastic_log_likelihoods, color='#ed3b3b', linestyle='dashed')
-plt.legend(['EM', 'stochastic_EM'])
-plt.show()
+
+print("stochastic_EM:")
+stochastic_em_log_likelihoods = []
+# クロスバリデーション(5分割)を用いる
+i = 1
+for X_train_index, X_test_index in kf.split(X):
+    log_likelihoods, pi, mu, sigma = clustering(X[X_train_index], X[X_test_index], pi, mu, sigma, stochastic_cluster)
+    log_likelihoods = np.array(log_likelihoods)
+    stochastic_em_log_likelihoods.append(log_likelihoods)
+    # 1000回更新後、パラメータがどのような値になったかを表示
+    print("pi", i, ": ", pi )
+    print("mu", i, ": ", mu )
+    print("sigma", i, ": ", sigma )
+    i += 1
+stochastic_em_log_likelihoods = np.array(stochastic_em_log_likelihoods)
+
+
+# 5つの対数尤度配列をそれぞれEMとSEMそれぞれplot
+for normal, stochastic in zip(normal_em_log_likelihoods, stochastic_em_log_likelihoods):
+    plt.plot(normal, color='#4169e1', linestyle='solid')
+    plt.plot(stochastic, color='#f2410c', linestyle='dashdot')
+    plt.show()
+
