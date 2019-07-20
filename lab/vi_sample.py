@@ -19,6 +19,7 @@ class VariationalGaussianMixture(object):
         self.beta0 = 1.
 
         self.component_size = self.sample_size / self.n_component + np.zeros(self.n_component)
+        print(self.component_size)
         self.alpha = self.alpha0 + self.component_size
         self.beta = self.beta0 + self.component_size
         indices = np.random.choice(self.sample_size, self.n_component, replace=False)
@@ -26,6 +27,7 @@ class VariationalGaussianMixture(object):
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         # print(self.W)
         self.nu = self.nu0 + self.component_size
+        print(self.component_size)
 
     def get_params(self):
         return self.alpha, self.beta, self.m, self.W, self.nu
@@ -43,7 +45,7 @@ class VariationalGaussianMixture(object):
 
     def e_like_step(self, X):
         d = X[:, :, None] - self.m
-        print(d.shape)
+        # print(d.shape)
         gauss = np.exp(
             -0.5 * self.ndim / self.beta
             - 0.5 * self.nu * np.sum(
@@ -52,6 +54,7 @@ class VariationalGaussianMixture(object):
         )
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
+        # print(Lambda)
         r = pi * np.sqrt(Lambda) * gauss
         r /= np.sum(r, axis=-1, keepdims=True)
         r[np.isnan(r)] = 1. / self.n_component
