@@ -30,12 +30,12 @@ def gaussian(X, W, m, nu, dim, beta):
     return gauss
 
 
-def calc_r(X, W, m, nu, dim, beta, u_dir_param):
+def calc_r(X, W, m, nu, dim, beta, dir_param):
     gauss = gaussian(X, W, m, nu, dim, beta)
     # PRML式10.65
     log_lambda = digamma((nu + 1 - np.arange(1, dim+1)[:, None]) / 2).sum(axis=0) + dim*np.log(2) + LA.det(W)
     # PRML式10.66
-    log_pi = np.exp(digamma(u_dir_param)) - digamma(u_dir_param.sum(axis=0))
+    log_pi = np.exp(digamma(dir_param)) - digamma(dir_param.sum(axis=0))
     Lambda = np.exp(log_lambda)
     pi = np.exp(log_pi)
     # print(pi)
@@ -45,6 +45,32 @@ def calc_r(X, W, m, nu, dim, beta, u_dir_param):
     r = r / np.tile(r.sum(axis=1), (2, 1)).T
     r[np.isnan(r)] = 1.0 / 2.0
     return r
+
+
+def update_param(X, W0, m0, nu0, beta0, dir_param0, r):
+    # PRML式10.51
+    N = r.sum(axis=0)
+    # PRML式10.52
+    bar_x = (r * X).sum(axis=0) / N
+    elm1 = r * (X - np.tile(bar_x, (3000, 1)))
+    # PRML式10.53
+    S = np.dot(elm1.T, (X - np.tile(bar_x, (3000, 1)))) / N
+    # PRML式10.58
+    dir_param = dir_param0 + N
+    # PRML式10.60
+    beta = beta0 + N
+    # PRML式10.61
+    m = (beta0*m0 + N*bar_x) / beta
+    # PRML式10.62
+    W = LA.inv(
+        LA.inv(W0)
+        +  N * S
+        + (beta0*N) * np.dot((bar_x - m0), (bar_x - m0).T) / (beta0 + N)
+        )
+    # PRML式10.63
+    nu = nu0 + N
+    return dir_param, beta, m, W, nu
+
 
 np.random.seed(20)
 K = 2 # クラス数 
@@ -61,14 +87,19 @@ beta0 = 1.0
 nu = np.array([2.0, 2.0])
 m = [1.0, 3.0] # mの初期値（てきとう）
 beta = beta0
-W = np.array([[0.01, 0.05],
+W0 = np.array([[0.01, 0.05],
               [0.05, 0.04]
             ])
+W = W0
 
 # ディリクレ分布のパラメータを定義
-dir_param = np.array([1.0, 2.0]) # [1.0, 0.1]だとdigammaに代入した時にマイナスになる
-u_dir_param = dir_param
-r = calc_r(X, W, m, nu, dim, beta, u_dir_param)
-for x in r:
-    print(x)
-# print(X)
+dir_param0 = np.array([1.0, 2.0]) # [1.0, 0.1]だとdigammaに代入した時にマイナスになる
+dir_param = dir_param0
+r = calc_r(X, W, m, nu, dim, beta, dir_param)
+dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
+# print(r)
+# for iter in range(1000):
+#     print(iter)
+#     r = calc_r(X, W, m, nu, dim, beta, dir_param)
+#     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
+# print(r)
