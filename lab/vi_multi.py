@@ -35,11 +35,10 @@ def calc_r(X, W, m, nu, dim, beta, dir_param):
     # PRML式10.65
     log_lambda = digamma((nu + 1 - np.arange(1, dim+1)[:, None]) / 2).sum(axis=0) + dim*np.log(2) + LA.det(W)
     # PRML式10.66
+    print(dir_param.sum(axis=0))
     log_pi = np.exp(digamma(dir_param)) - digamma(dir_param.sum(axis=0))
     Lambda = np.exp(log_lambda)
     pi = np.exp(log_pi)
-    # print(pi)
-    # print(Lambda)
     r = pi * np.sqrt(Lambda) * gauss
     r[np.where(r == 0)] = 0.5
     r = r / np.tile(r.sum(axis=1), (2, 1)).T
@@ -91,15 +90,11 @@ W0 = np.array([[0.01, 0.05],
               [0.05, 0.04]
             ])
 W = W0
-
 # ディリクレ分布のパラメータを定義
 dir_param0 = np.array([1.0, 2.0]) # [1.0, 0.1]だとdigammaに代入した時にマイナスになる
 dir_param = dir_param0
 r = calc_r(X, W, m, nu, dim, beta, dir_param)
 dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
-# print(r)
-# for iter in range(1000):
-#     print(iter)
-#     r = calc_r(X, W, m, nu, dim, beta, dir_param)
-#     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
-# print(r)
+for iter in range(1000):
+    r = calc_r(X, W, m, nu, dim, beta, dir_param)
+    dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
