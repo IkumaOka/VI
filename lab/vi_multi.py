@@ -35,8 +35,8 @@ def calc_r(X, W, m, nu, dim, beta, dir_param):
     # PRML式10.65
     log_lambda = digamma((nu + 1 - np.arange(1, dim+1)[:, None]) / 2).sum(axis=0) + dim*np.log(2) + LA.det(W)
     # PRML式10.66
-    print(dir_param.sum(axis=0))
-    log_pi = np.exp(digamma(dir_param)) - digamma(dir_param.sum(axis=0))
+    # print(dir_param.sum(axis=0))
+    log_pi = digamma(dir_param) - digamma(dir_param.sum(axis=0))
     Lambda = np.exp(log_lambda)
     pi = np.exp(log_pi)
     r = pi * np.sqrt(Lambda) * gauss
@@ -98,3 +98,4 @@ dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
 for iter in range(1000):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
+    print(r)
