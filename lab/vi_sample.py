@@ -19,15 +19,13 @@ class VariationalGaussianMixture(object):
         self.beta0 = 1.
 
         self.component_size = self.sample_size / self.n_component + np.zeros(self.n_component)
-        print(self.component_size)
         self.alpha = self.alpha0 + self.component_size
         self.beta = self.beta0 + self.component_size
         indices = np.random.choice(self.sample_size, self.n_component, replace=False)
         self.m = X[indices].T
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
-        # print(self.W)
         self.nu = self.nu0 + self.component_size
-        print(self.component_size)
+        print(self.m.shape)
 
     def get_params(self):
         return self.alpha, self.beta, self.m, self.W, self.nu
@@ -45,7 +43,6 @@ class VariationalGaussianMixture(object):
 
     def e_like_step(self, X):
         d = X[:, :, None] - self.m
-        # print(d.shape)
         gauss = np.exp(
             -0.5 * self.ndim / self.beta
             - 0.5 * self.nu * np.sum(
@@ -69,6 +66,8 @@ class VariationalGaussianMixture(object):
         self.beta = self.beta0 + self.component_size
         self.m = (self.beta0 * self.m0[:, None] + self.component_size * Xm) / self.beta
         d = Xm - self.m0[:, None]
+        print(self.component_size.shape)
+        print(self.beta0)
         self.W = np.linalg.inv(
             np.linalg.inv(self.W0)
             + (self.component_size * S).T
@@ -113,7 +112,9 @@ def create_toy_data():
 
 
 def main():
+    np.random.seed(20)
     X = create_toy_data()
+    # print(X.shape)
 
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
     model.fit(X, iter_max=100)
