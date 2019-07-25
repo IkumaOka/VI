@@ -74,6 +74,7 @@ K = 5 # クラス数
 N = 1000 # データ数
 # データは2次元 × 3000
 X = create_data(N)
+print(X.shape)
 sample_size = 3000
 # ウィシャート分布のパラメータを定義
 dim = 2
@@ -95,4 +96,4 @@ dir_param = dir_param0
 for iter in range(15):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
-print(r)
+# print(r)
