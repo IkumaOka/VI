@@ -5,16 +5,25 @@ from scipy.special import digamma, gamma, loggamma
 from scipy.misc import logsumexp
 import math
 import numpy.linalg as LA
+from numpy.random import *
+import warnings
+warnings.filterwarnings('ignore')
 
 
 def create_data(N):
-    x1 = np.random.normal(size=(N, 2))
-    x1 += np.array([-5, -5])
-    x2 = np.random.normal(size=(N, 2))
-    x2 += np.array([5, -5])
-    x3 = np.random.normal(size=(N, 2))
-    x3 += np.array([0, 5])
-    return np.vstack((x1, x2, x3))
+    mu = np.array([[0, 0], [2, 2], [4, 4]])
+    sigma = np.array([[[3, 2], 
+                       [2, 5]],
+                       [[4, 1],
+                       [1, 7]],
+                       [[5, 3],
+                       [3, 10]]])
+    data = []
+    for i in range(len(mu)):
+        values = multivariate_normal(mu[i], sigma[i], N)
+        data.extend(values)
+    data = np.array(data)
+    return data
 
 
 def gaussian(X, W, m, nu, dim, beta):
@@ -74,7 +83,6 @@ K = 5 # クラス数
 N = 1000 # データ数
 # データは2次元 × 3000
 X = create_data(N)
-print(X.shape)
 sample_size = 3000
 # ウィシャート分布のパラメータを定義
 dim = 2
@@ -93,7 +101,7 @@ dir_param0 = np.array([1.0, 2.0, 3.0, 4.0, 5.0]) # [1.0, 0.1]だとdigammaに代
 dir_param = dir_param0
 # r = calc_r(X, W, m, nu, dim, beta, dir_param)
 # dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
-for iter in range(15):
+for iter in range(50):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
-# print(r)
+print(r)
