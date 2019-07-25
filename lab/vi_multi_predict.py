@@ -62,6 +62,7 @@ def update_param(X, W0, m0, nu0, beta0, dir_param0, r):
     S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / N
     # PRML式10.58
     dir_param = dir_param0 + N
+    print(dir_param)
     # PRML式10.60
     beta = beta0 + N
     # PRML式10.61
@@ -77,6 +78,8 @@ def update_param(X, W0, m0, nu0, beta0, dir_param0, r):
     nu = nu0 + N
     return dir_param, beta, m, W, nu
 
+def classify(r):
+    return np.argmax(r, 1)
 
 np.random.seed(20)
 K = 5 # クラス数 
@@ -88,7 +91,7 @@ dim = 2
 nu0 = dim
 m0 = np.array([0.0, 0.0])
 beta0 = 1.0
-nu = np.array([2.0, 2.0, 2.0, 2.0, 2.0])
+nu = np.array([3.0, 3.0, 3.0, 3.0, 3.0])
 m = np.array([[1.0, 2.0], [1.0, 2.0], [1.0, 2.0], [1.0, 2.0], [1.0, 2.0]]).T # mの初期値（てきとう）
 beta = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
 W0 = np.array([[0.001, 0.0],
@@ -96,13 +99,15 @@ W0 = np.array([[0.001, 0.0],
             ])
 W = np.tile(W0, (K, 1, 1)).T
 # ディリクレ分布のパラメータを定義
-dir_param0 = np.array([1.0, 2.0, 3.0, 4.0, 5.0]) # [1.0, 0.1]だとdigammaに代入した時にマイナスになる
-dir_param = dir_param0
+dir_param0 = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+dir_param = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
 # r = calc_r(X, W, m, nu, dim, beta, dir_param)
 # dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
-for iter in range(50):
+for iter in range(2):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
+
+
+# plt.scatter(X[:, 0], X[:, 1])
+# plt.show()
 print(r)
-plt.scatter(X[:, 0], X[:, 1])
-plt.show()

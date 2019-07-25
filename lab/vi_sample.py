@@ -25,7 +25,6 @@ class VariationalGaussianMixture(object):
         self.m = X[indices].T
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
-        print(self.m.shape)
 
     def get_params(self):
         return self.alpha, self.beta, self.m, self.W, self.nu
@@ -63,6 +62,7 @@ class VariationalGaussianMixture(object):
         d = X[:, :, None] - Xm
         S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / self.component_size
         self.alpha = self.alpha0 + self.component_size
+        print(self.alpha)
         self.beta = self.beta0 + self.component_size
         self.m = (self.beta0 * self.m0[:, None] + self.component_size * Xm) / self.beta
         d = Xm - self.m0[:, None]
@@ -119,6 +119,7 @@ def main():
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
     model.fit(X, iter_max=100)
     labels = model.classify(X)
+    print(labels)
 
     x_test, y_test = np.meshgrid(
         np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
