@@ -11,7 +11,7 @@ warnings.filterwarnings('ignore')
 
 
 def create_data(N):
-    mu = np.array([[0, 0], [20, 20], [40, 40]])
+    mu = np.array([[0, 0], [10, 20], [20, 10]])
     sigma = np.array([[[3, 2], 
                        [2, 5]],
                        [[4, 1],
@@ -40,15 +40,17 @@ def gaussian(X, W, m, nu, dim, beta):
 def calc_r(X, W, m, nu, dim, beta, dir_param):
     gauss = gaussian(X, W, m, nu, dim, beta)
     # PRML式10.65
-    log_lambda = digamma((nu + 1 - np.arange(dim)[:, None]) / 2).sum(axis=0) + dim*np.log(2) + LA.slogdet(W.T)[1]
+    # print(np.arange(1,dim+1)[:, None])
+    log_lambda = (digamma((nu + 1 - np.arange(1, dim+1)[:, None]) / 2)).sum(axis=0) + dim*np.log(2) + LA.slogdet(W.T)[1]
+    # print(log_lambda)
     # PRML式10.66
     log_pi = digamma(dir_param) - digamma(dir_param.sum(axis=0))
     Lambda = np.exp(log_lambda)
     pi = np.exp(log_pi)
     r = pi * np.sqrt(Lambda) * gauss
     # r[np.where(r == 0)] = 0.5
-    r /= np.sum(r, axis=-1, keepdims=True)
     # r[np.isnan(r)] = 1.0 / 2.0
+    r /= np.sum(r, axis=-1, keepdims=True)
     return r
 
 
@@ -88,15 +90,15 @@ dim = 2
 nu0 = dim
 m0 = np.array([0.0, 0.0])
 beta0 = 1.0
-nu = np.array([2.0, 2.0, 2.0, 2.0, 2.0])
-m = np.array([[1.0, 2.0], [1.0, 2.0], [1.0, 2.0], [1.0, 2.0], [1.0, 2.0]]).T # mの初期値（てきとう）
+nu = np.array([32.0, 32.0, 32.0, 31.0, 31.0])
+m = np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]).T # mの初期値（てきとう）
 beta = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
 W0 = np.array([[0.001, 0.0],
               [0.0, 0.001]
             ])
 W = np.tile(W0, (K, 1, 1)).T
 # ディリクレ分布のパラメータを定義
-dir_param0 = np.array([1.0, 2.0, 3.0, 4.0, 5.0]) # [1.0, 0.1]だとdigammaに代入した時にマイナスになる
+dir_param0 = np.array([0.01, 0.01, 0.01, 0.01, 0.01])
 dir_param = dir_param0
 # r = calc_r(X, W, m, nu, dim, beta, dir_param)
 # dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)

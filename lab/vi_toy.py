@@ -25,6 +25,7 @@ class VariationalGaussianMixture(object):
         self.m = X[indices].T
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
+        print("nu: ", self.nu)
 
     def get_params(self):
         return self.alpha, self.beta, self.m, self.W, self.nu
@@ -50,19 +51,19 @@ class VariationalGaussianMixture(object):
         )
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
-        # print(Lambda)
         r = pi * np.sqrt(Lambda) * gauss
         r /= np.sum(r, axis=-1, keepdims=True)
         r[np.isnan(r)] = 1. / self.n_component
-        print(r)
         return r
 
     def m_like_step(self, X, r):
         self.component_size = r.sum(axis=0)
+        print(self.component_size.shape)
         Xm = X.T.dot(r) / self.component_size
         d = X[:, :, None] - Xm
         S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / self.component_size
         self.alpha = self.alpha0 + self.component_size
+        # print(self.alpha)
 
         self.beta = self.beta0 + self.component_size
         self.m = (self.beta0 * self.m0[:, None] + self.component_size * Xm) / self.beta
