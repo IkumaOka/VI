@@ -1,117 +1,111 @@
+# vi_multi.pyからコピー
 import numpy as np
-import random
 import sys
 import matplotlib.pyplot as plt
-from scipy.special import digamma, gamma
+from scipy.special import digamma, gamma, loggamma
+from scipy.misc import logsumexp
+import math
+import numpy.linalg as LA
+from numpy.random import *
+import random
+import warnings
+warnings.filterwarnings('ignore')
 
-def create_data(N, K):
-    loc = np.array([1.0, 3.0]) # 平均の初期値
-    scale = np.array([1.0, 2.0]) # 標準偏差の初期値
-    X, mu_star, sigma_star = [], [], []
-    for i in range(K):
-        X = np.append(X, np.random.normal(loc = loc[i], scale = scale[i], size = int(N / K)))
-        mu_star = np.append(mu_star, loc[i])
-        sigma_star = np.append(sigma_star, scale[i])
-    return (X, mu_star, sigma_star)
 
-def gaussian(mu, sigma):
-    def f(x):
-        return np.exp(-0.5 * (x - mu) ** 2 / sigma) / np.sqrt(2 * np.pi * sigma)
-    return f
+def create_data(N):
+    mu = np.array([[0, 0], [10, 20], [20, 10]])
+    sigma = np.array([[[3, 2], 
+                       [2, 5]],
+                       [[4, 1],
+                       [1, 7]],
+                       [[5, 3],
+                       [3, 10]]])
+    data = []
+    for i in range(len(mu)):
+        values = multivariate_normal(mu[i], sigma[i], N)
+        data.extend(values)
+    data = np.array(data)
+    return data
 
-# 負担率を計算
-# ηを計算する式（式7.29参照）PRMLだと式10.46
-# 式7.29第1項において、多変量では正規-ウィシャート分布を使うが、一変量の場合は正規-ガンマ分布を使う
-def estimate_posterior_likelihood(X):
-    # 正規-ガンマ分布の期待値を求める(wiki参照)
-    ex_T = kappa / xi
-    ex_T_X = psi * kappa / xi
-    ex_T_X_2 = (1 / beta) + (psi ** 2) * kappa / xi
-    log_eta = []
-    for i in range(len(X)):
-        elm = ( (X[i]**2 )*ex_T - 2*X[i]*ex_T_X + ex_T_X_2 ) / 2 + digamma(dir_param)- digamma(dir_param.sum(axis=0))
-        log_eta.append(elm)
-    log_eta = np.array(log_eta)
-    eta = np.exp(log_eta)
-    eta = np.array(eta)
-    # print(eta)
-    r = []
-    for i in range(len(eta)):
-        a = eta[i] / eta[i].sum()
-        r.append(a)
-    r = np.array(r)
+
+def gaussian(X, W, m, nu, dim, beta):
+    d = X[:, :, None] - m
+    gauss = np.exp(
+            -0.5 * dim / beta
+            - 0.5 * nu * np.sum(
+                np.einsum('ijk,njk->nik', W, d) * d,
+                axis=1)
+        )
+    return gauss
+
+
+def calc_r(X, W, m, nu, dim, beta, dir_param):
+    gauss = gaussian(X, W, m, nu, dim, beta)
+    # PRML式10.65
+    # print(np.arange(1,dim+1)[:, None])
+    log_lambda = (digamma((nu + 1 - np.arange(1, dim+1)[:, None]) / 2)).sum(axis=0) + dim*np.log(2) + LA.slogdet(W.T)[1]
+    # print(log_lambda)
+    # PRML式10.66
+    log_pi = digamma(dir_param) - digamma(dir_param.sum(axis=0))
+    Lambda = np.exp(log_lambda)
+    pi = np.exp(log_pi)
+    r = pi * np.sqrt(Lambda) * gauss
+    # r[np.where(r == 0)] = 0.5
+    # r[np.isnan(r)] = 1.0 / 2.0
+    r /= np.sum(r, axis=-1, keepdims=True)
     return r
 
-# Mステップ
-def estimate_gmm_parameter(X, r, psi, beta, kappa, xi, dir_param):
-    # 負担率の総和
-    n_j = r.sum(axis=0)
-    # 負担率による観測値の重み付き平均
-    barx_j = np.dot(X.T, r) / n_j
 
-    # q(π)のパラメータを更新(式7.44)
-    dir_param = dir_param + n_j
+def update_param(X, W0, m0, nu0, beta0, dir_param0, r):
+    # PRML式10.51
+    N = r.sum(axis=0)
+    # PRML式10.52
+    bar_x = np.dot(X.T, r) / N
+    d = X[:, :, None] - bar_x
+    # PRML式10.53
+    S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / N
+    # PRML式10.58
+    dir_param = dir_param0 + N
+    # PRML式10.60
+    beta = beta0 + N
+    # PRML式10.61
+    m = (beta0 * m0[:, None] + N * bar_x) / beta
+    # PRML式10.62
+    d_ = bar_x - m0[:, None]
+    W = LA.inv(
+        LA.inv(W0)
+        +  (N * S).T
+        + (beta0 * N * np.einsum('ik,jk->ijk', d_, d_) / (beta0 + N)).T
+        ).T
+    # PRML式10.63
+    nu = nu0 + N
+    return dir_param, beta, m, W, nu
 
-    #q(μ,λ)のパラメータを更新(式7.54)
-    psi = ( n_j * barx_j + beta * psi ) / ( n_j + beta )
-    beta = n_j + beta
-    kappa = n_j / 2 + kappa
-    xi = ( n_j * barx_j + (n_j * beta + ((barx_j - psi) ** 2 / (n_j + beta))) / 2 ) + xi
-    return psi, beta, kappa, xi, dir_param
 
-def calc_log_likelihood(X, pi, gf):
-    p_i = []
-    for i in range(len(X)):
-        value = pi * gf(X[i])
-        p_i.append(value)
-    p_i = np.array(p_i)
-    p = np.sum(p_i)
-    log_p = np.log(p)
-    return log_p
-
-np.random.seed(19)
-K = 2 # クラス数
-N = 1000 * K # データ数
-# π,μ,σの値を初期化
-pi = np.random.rand(K)
-mu = np.random.randn(K)
-sigma = np.abs(np.random.randn(K))
-lamda = 1.0 / sigma
-X, mu_star, sigma_star = create_data(N, K)
-# 正規-ガンマ分布のパラメータを定義
-psi = np.array([0.0, 0.0])
-beta = np.array([1.0, 0.9])
-kappa = np.array([1.0, 0.9])
-xi = np.array([1.0, 0.9])
+np.random.seed(20)
+K = 5 # クラス数 
+N = 100 # データ数
+# データは2次元 × 3000
+X = create_data(N)
+# ウィシャート分布のパラメータを定義
+dim = 2
+nu0 = dim
+m0 = np.array([0.0, 0.0])
+beta0 = 1.0
+nu = np.array([32.0, 32.0, 32.0, 31.0, 31.0])
+m = np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]).T # mの初期値（てきとう）
+beta = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+W0 = np.array([[0.001, 0.0],
+              [0.0, 0.001]
+            ])
+W = np.tile(W0, (K, 1, 1)).T
 # ディリクレ分布のパラメータを定義
-dir_param = np.array([1.0, 0.1])
-log_likelihoods = []
-for iter in range(1000):
-    # Xからランダムに100個のデータを抽出
-    random_X = random.choices(X, k=100)
-    random_X = np.array(random_X)
-    print(random_X.shape)
-    r = estimate_posterior_likelihood(random_X)
-    print(r)
-    psi, beta, kappa, xi, dir_param = estimate_gmm_parameter(random_X, r, psi, beta, kappa, xi, dir_param)
-    # print("psi: ", psi)
-    # print("beta: ", beta)
-    # print("kappa: ", kappa)
-    # print("xi: ", xi)
-    # print("dir_param: ", dir_param)
-    # print()
-    ave_dir_param = np.average(dir_param)
-    # print("ave_dir_param: ", ave_dir_param)
-    ave_sigma = xi / kappa # 後でσを使うから期待値の逆数をとった
-    gf = gaussian(psi, ave_sigma)
-    log_likelihood = calc_log_likelihood(random_X, ave_dir_param, gf)
-    print(log_likelihood)
-    log_likelihoods.append(log_likelihood)
-
-log_likelihoods = np.array(log_likelihoods)
-
-plt.plot(log_likelihoods, color='#4169e1', linestyle='solid')
-plt.show()
-
-
-
+dir_param0 = np.array([0.01, 0.01, 0.01, 0.01, 0.01])
+dir_param = dir_param0
+for iter in range(50):
+    rand_X = random.sample(X, 30)
+    r = calc_r(rand_X, W, m, nu, dim, beta, dir_param)
+    dir_param, beta, m, W, nu = update_param(rand_X, W0, m0, nu0, beta0, dir_param0, r)
+print(r)
+# plt.scatter(X[:, 0], X[:, 1])
+# plt.show()

@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from scipy.special import digamma, gamma, loggamma
 from scipy.misc import logsumexp
 import math
@@ -39,12 +40,13 @@ def gaussian(X, W, m, nu, dim, beta):
 
 def calc_r(X, W, m, nu, dim, beta, dir_param):
     gauss = gaussian(X, W, m, nu, dim, beta)
+    # print(gauss)
     # PRML式10.65
     # print(np.arange(1,dim+1)[:, None])
     log_lambda = (digamma((nu + 1 - np.arange(1, dim+1)[:, None]) / 2)).sum(axis=0) + dim*np.log(2) + LA.slogdet(W.T)[1]
     # print(log_lambda)
     # PRML式10.66
-    log_pi = digamma(dir_param) - digamma(dir_param.sum(axis=0))
+    log_pi = digamma(dir_param) - digamma(dir_param.sum())
     Lambda = np.exp(log_lambda)
     pi = np.exp(log_pi)
     r = pi * np.sqrt(Lambda) * gauss
@@ -80,6 +82,25 @@ def update_param(X, W0, m0, nu0, beta0, dir_param0, r):
     return dir_param, beta, m, W, nu
 
 
+def classify(r):
+        return np.argmax(r, 1)
+
+
+def student_t(nu, dim, beta, W, m, X_test):
+    nu = nu + 1 - dim
+    L = nu * beta * W / (1 + beta)
+    d = X_test[:, :, None] - m
+    maha_sq = np.sum(np.einsum('nik,ijk->njk', d, L) * d, axis=1)
+    return (
+        gamma(0.5 * (nu + dim))
+        * np.sqrt(np.linalg.det(L.T))
+        * (1 + maha_sq / nu) ** (-0.5 * (nu + dim))
+        / (gamma(0.5 * nu) * (nu * np.pi) ** (0.5 * dim)))
+
+def predict_dist(dir_param, nu, dim, beta, W, m, X_test):
+        return (dir_param * student_t(nu, dim, beta, W, m, X_test)).sum(axis=-1) / dir_param.sum()
+
+
 np.random.seed(20)
 K = 5 # クラス数 
 N = 100 # データ数
@@ -91,8 +112,8 @@ nu0 = dim
 m0 = np.array([0.0, 0.0])
 beta0 = 1.0
 nu = np.array([32.0, 32.0, 32.0, 31.0, 31.0])
-m = np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]).T # mの初期値（てきとう）
-beta = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+m = np.array([[1.0, 1.0], [3.0, 3.0], [4.0, 4.0], [5.0, 5.0], [7.0, 7.0]]).T # mの初期値（てきとう）
+beta = np.array([1.0, 3.0, 2.0, 4.0, 5.0])
 W0 = np.array([[0.001, 0.0],
               [0.0, 0.001]
             ])
@@ -105,6 +126,13 @@ dir_param = dir_param0
 for iter in range(50):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
-print(r)
-plt.scatter(X[:, 0], X[:, 1])
+# print(r)
+labels = classify(r)
+# print(labels)
+x_test, y_test = np.meshgrid(
+        np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
+X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
+probs = predict_dist(dir_param, nu, dim, beta, W, m, X_test)
+plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
+plt.contour(x_test, y_test, probs.reshape(100, 100))
 plt.show()
