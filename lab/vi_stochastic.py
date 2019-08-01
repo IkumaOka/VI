@@ -1,4 +1,4 @@
-# vi_multi.pyのパラメータを調べるため
+# 負担率をハードに割り当てる（1, 0）
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -101,6 +101,19 @@ def predict_dist(dir_param, nu, dim, beta, W, m, X_test):
         return (dir_param * student_t(nu, dim, beta, W, m, X_test)).sum(axis=-1) / dir_param.sum()
 
 
+# 負担率は確率分布で、その確率分布に従うコインを投げて0か1を代入
+def stochastic_cluster(r):
+    clusters = [0, 0, 0, 0, 1]
+    stochastic_r = []
+    for i in range(len(r)):
+        p = np.random.choice(a=clusters, p=r[i])
+        a = np.zeros(len(r[i]))
+        a[p] = 1.0
+        stochastic_r.append(a)
+    stochastic_r = np.array(stochastic_r)
+
+    return stochastic_r
+
 
 np.random.seed(20)
 K = 5 # クラス数 
@@ -124,8 +137,11 @@ dir_param0 = np.array([0.01, 0.02, 0.03, 0.03, 0.03])
 dir_param = dir_param0
 for iter in range(50):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
-    dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
+    stochastic_r = stochastic_cluster(r)
+    print(stochastic_r)
+    dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, stochastic_r)
 labels = classify(r)
+# print(labels)
 x_test, y_test = np.meshgrid(
         np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
 X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
