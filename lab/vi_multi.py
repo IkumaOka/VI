@@ -13,13 +13,13 @@ warnings.filterwarnings('ignore')
 
 
 def create_data(N):
-    mu = np.array([[0, 0], [10, 20], [45, 10]])
-    sigma = np.array([[[3, 2], 
-                       [2, 5]],
-                       [[3, 2],
-                       [2, 5]],
-                       [[3, 2],
-                       [2, 5]]])
+    mu = np.array([[0, 0], [20,10], [30, 0]])
+    sigma = np.array([[[3, 3], 
+                       [3, 3]],
+                       [[3, 3],
+                       [3, 3]],
+                       [[3, 3],
+                       [3, 3]]])
     data = []
     for i in range(len(mu)):
         values = multivariate_normal(mu[i], sigma[i], N)
@@ -41,9 +41,8 @@ def gaussian(X, W, m, nu, dim, beta):
 
 def calc_r(X, W, m, nu, dim, beta, dir_param):
     gauss = gaussian(X, W, m, nu, dim, beta)
-    # print(gauss)
+    print(gauss)
     # PRML式10.65
-    # print(np.arange(1,dim+1)[:, None])
     log_lambda = (digamma((nu + 1 - np.arange(1, dim+1)[:, None]) / 2)).sum(axis=0) + dim*np.log(2) + LA.slogdet(W.T)[1]
     # PRML式10.66
     log_pi = digamma(dir_param) - digamma(dir_param.sum())
@@ -107,25 +106,26 @@ K = 5 # クラス数
 N = 100 # データ数
 # データは2次元 × 3000
 X = create_data(N)
+average_X = np.mean(X, axis=0)
+m = np.tile(average_X, (5, 1)).T
 # ウィシャート分布のパラメータを定義
 dim = 2
 nu0 = dim
 m0 = np.array([0.0, 0.0])
 beta0 = 1.0
-nu = np.array([35.0, 36.0, 37.0, 38.0, 39.0])
-m = np.array([[1.0, 1.0], [3.0, 3.0], [4.0, 4.0], [5.0, 5.0], [7.0, 7.0]]).T # mの初期値（てきとう）
-beta = np.array([1.0, 5.0, 2.0, 4.0, 5.0])
-W0 = np.array([[0.001, 0.0],
-              [0.0, 0.001]
-            ])
+nu = np.array([0.01, 0.01, 0.01, 0.01, 0.01])
+# m = np.array([[1.0, 1.0], [3.0, 3.0], [4.0, 4.0], [5.0, 5.0], [7.0, 7.0]]).T # mの初期値（てきとう）
+beta = np.array([0.01, 0.05, 0.02, 0.04, 0.05])
+W0 = np.cov(X.T)
 W = np.tile(W0, (K, 1, 1)).T
-# ディリクレ分布のパラメータを定義
-dir_param0 = np.array([0.01, 0.02, 0.03, 0.03, 0.03])
+# ディリクレ分布のパラメータ
+dir_param0 = np.array([2.0, 3.0, 10.0, 1.0, 2.0])
 dir_param = dir_param0
-for iter in range(50):
+for iter in range(20):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, r)
 labels = classify(r)
+print(labels)
 x_test, y_test = np.meshgrid(
         np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
 X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()

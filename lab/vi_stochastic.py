@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 
 
 def create_data(N):
-    mu = np.array([[0, 0], [10, 20], [45, 10]])
+    mu = np.array([[0, 0], [30, 10], [45, 30]])
     sigma = np.array([[[3, 2], 
                        [2, 5]],
                        [[3, 2],
@@ -59,8 +59,10 @@ def calc_r(X, W, m, nu, dim, beta, dir_param):
 def update_param(X, W0, m0, nu0, beta0, dir_param0, r):
     # PRML式10.51
     N = r.sum(axis=0)
+    N[np.where(N == 0)] = 1.0e-300
     # PRML式10.52
     bar_x = np.dot(X.T, r) / N
+    # print(bar_x)
     d = X[:, :, None] - bar_x
     # PRML式10.53
     S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / N
@@ -102,8 +104,8 @@ def predict_dist(dir_param, nu, dim, beta, W, m, X_test):
 
 
 # 負担率は確率分布で、その確率分布に従うコインを投げて0か1を代入
-def stochastic_cluster(r):
-    clusters = [0, 0, 0, 0, 1]
+def stochastic_cluster(r, K):
+    clusters = list(range(0, K))
     stochastic_r = []
     for i in range(len(r)):
         p = np.random.choice(a=clusters, p=r[i])
@@ -120,13 +122,18 @@ K = 5 # クラス数
 N = 100 # データ数
 # データは2次元 × 3000
 X = create_data(N)
+print(X.shape)
+average_X = np.mean(X, axis=0)
+cov_X = np.cov(X.T)
+print(cov_X.shape)
+m = np.tile(average_X, (5, 1)).T
 # ウィシャート分布のパラメータを定義
 dim = 2
 nu0 = dim
 m0 = np.array([0.0, 0.0])
 beta0 = 1.0
 nu = np.array([35.0, 36.0, 37.0, 38.0, 39.0])
-m = np.array([[1.0, 1.0], [3.0, 3.0], [4.0, 4.0], [5.0, 5.0], [7.0, 7.0]]).T # mの初期値（てきとう）
+# m = np.array([[1.0, 1.0], [3.0, 3.0], [4.0, 4.0], [5.0, 5.0], [7.0, 7.0]]).T # mの初期値（てきとう）
 beta = np.array([1.0, 5.0, 2.0, 4.0, 5.0])
 W0 = np.array([[0.001, 0.0],
               [0.0, 0.001]
@@ -137,14 +144,16 @@ dir_param0 = np.array([0.01, 0.02, 0.03, 0.03, 0.03])
 dir_param = dir_param0
 for iter in range(50):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
-    stochastic_r = stochastic_cluster(r)
-    print(stochastic_r)
+    print(r)
+    stochastic_r = stochastic_cluster(r, K)
+    # print(stochastic_r)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, stochastic_r)
+    # print(dir_param, beta, m, W, nu)
 labels = classify(r)
 # print(labels)
 x_test, y_test = np.meshgrid(
         np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
 X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-probs = predict_dist(dir_param, nu, dim, beta, W, m, X_test)
+# probs = predict_dist(dir_param, nu, dim, beta, W, m, X_test)
 plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
 plt.show()
