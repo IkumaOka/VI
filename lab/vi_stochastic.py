@@ -1,4 +1,4 @@
-# 負担率をハードに割り当てる（1, 0）
+# うまく動かない変分ベイズ
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -142,11 +142,10 @@ W = np.tile(W0, (K, 1, 1)).T
 # ディリクレ分布のパラメータを定義
 dir_param0 = np.array([0.01, 0.02, 0.03, 0.03, 0.03])
 dir_param = dir_param0
-for iter in range(50):
+for iter in range(2700):
     r = calc_r(X, W, m, nu, dim, beta, dir_param)
-    print(r)
     stochastic_r = stochastic_cluster(r, K)
-    # print(stochastic_r)
+    print(stochastic_r)
     dir_param, beta, m, W, nu = update_param(X, W0, m0, nu0, beta0, dir_param0, stochastic_r)
     # print(dir_param, beta, m, W, nu)
 labels = classify(r)

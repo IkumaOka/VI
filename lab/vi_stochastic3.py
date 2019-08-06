@@ -1,3 +1,6 @@
+# vi_stochastic2.pyからコピー
+# 実験は1回だけversion
+
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,6 +29,7 @@ class VariationalGaussianMixture(object):
         self.m = X[indices].T
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
+        self.log_likelihoods = []
 
     def get_params(self):
         return self.alpha, self.beta, self.m, self.W, self.nu
@@ -36,8 +40,10 @@ class VariationalGaussianMixture(object):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
             stochastic_r = self.stochastic_cluster(r, self.n_component)
-            # print(stochastic_r)
+            print(stochastic_r)
             self.m_like_step(X, stochastic_r)
+            a = self.calc_loglikelihood(X)
+            self.log_likelihoods.append(a)
             if np.allclose(params, np.hstack([array.ravel() for array in self.get_params()])):
                 break
         else:
@@ -60,6 +66,8 @@ class VariationalGaussianMixture(object):
 
     def m_like_step(self, X, r):
         self.component_size = r.sum(axis=0)
+        self.component_size[np.where(self.component_size == 0)] = 1.0e-300
+        # print(self.component_size)
         Xm = X.T.dot(r) / self.component_size
         d = X[:, :, None] - Xm
         S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / self.component_size
@@ -112,6 +120,24 @@ class VariationalGaussianMixture(object):
     def predict_dist(self, X):
         return (self.alpha * self.student_t(X)).sum(axis=-1) / self.alpha.sum()
 
+    def calc_loglikelihood(self, X):
+        d = X[:, :, None] - self.m
+        gauss = np.exp(
+            -0.5 * self.ndim / self.beta
+            - 0.5 * self.nu * np.sum(
+                np.einsum('ijk,njk->nik', self.W, d) * d,
+                axis=1)
+        )
+        ave_alpha = self.alpha / np.mean(self.alpha)
+        # print(ave_alpha)
+        p_i = ave_alpha * gauss
+        # print(p_i)
+        p_1 = np.sum(p_i, axis=1)
+        p_2 = np.sum(p_1)
+        log_likelihood = np.log(p_2)
+        # print(log_likelihood)
+        return log_likelihood
+
 
 def create_toy_data():
     mu = np.array([[5, 5], [20, 20], [50, 10]])
@@ -130,13 +156,10 @@ def create_toy_data():
 
 
 def main():
-    np.random.seed(20)
+    np.random.seed(10)
     X = create_toy_data()
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    iter_max = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000,
-                1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000,
-                2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800, 2900, 3000
-                ]
+    iter_max = [1000]
     for iter in iter_max:
         model.fit(X, iter_max=iter)
         labels = model.classify(X)
@@ -148,7 +171,10 @@ def main():
         # plt.contour(x_test, y_test, probs.reshape(100, 100))
         plt.title(iter)
         save_name = str(iter) + '.png'
-        plt.savefig(save_name, dpi=500)
+        # plt.savefig(save_name, dpi=500)
+        plt.show()
+        plt.plot(model.log_likelihoods, color='#4169e1', linestyle='solid')
+        plt.show()
 
 
 if __name__ == '__main__':
