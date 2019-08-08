@@ -36,8 +36,9 @@ class VariationalGaussianMixture(object):
         self.init_params(X)
         for i in range(iter_max):
             params = np.hstack([array.flatten() for array in self.get_params()])
-            r = self.e_like_step(X)
-            alpha_, beta_, m_, W_, nu_ = self.m_like_step(X, r)
+            rand_X = X[np.random.choice(X.shape[0], 30), :]
+            r = self.e_like_step(rand_X)
+            alpha_, beta_, m_, W_, nu_ = self.m_like_step(rand_X, r)
             self.alpha = self.update_stochastic_param(alpha_, self.alpha, i)
             self.beta = self.update_stochastic_param(beta_, self.beta, i)
             self.m = self.update_stochastic_param(m_, self.m, i)
@@ -52,6 +53,8 @@ class VariationalGaussianMixture(object):
 
     def e_like_step(self, X):
         d = X[:, :, None] - self.m
+        print(self.beta)
+        # gaussの計算でinfが出てくる
         gauss = np.exp(
             -0.5 * self.ndim / self.beta
             - 0.5 * self.nu * np.sum(
@@ -61,18 +64,21 @@ class VariationalGaussianMixture(object):
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
         r = pi * np.sqrt(Lambda) * gauss
+        r[np.where(r == 0)] = 1.0e-300
         r /= np.sum(r, axis=-1, keepdims=True)
         r[np.isnan(r)] = 1. / self.n_component
         return r
 
     def m_like_step(self, X, r):
         self.component_size = r.sum(axis=0)
+        self.component_size[np.where(self.component_size == 0)] = 1.0e-300
         # (t-1)の変数を保存しておく
         alpha_ = self.alpha
         beta_ = self.beta
         m_ = self.m
         W_  = self.W
         nu_ = self.nu
+        # print(self.component_size)
         Xm = X.T.dot(r) / self.component_size
         d = X[:, :, None] - Xm
         S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / self.component_size
@@ -120,20 +126,22 @@ class VariationalGaussianMixture(object):
 
     def calc_loglikelihood(self, X):
         d = X[:, :, None] - self.m
+        # print(self.m)
+        # print(self.nu)
+        # print(self.beta)
         gauss = np.exp(
             -0.5 * self.ndim / self.beta
             - 0.5 * self.nu * np.sum(
                 np.einsum('ijk,njk->nik', self.W, d) * d,
                 axis=1)
         )
+        gauss[np.where(gauss == 0)] = 1.0e-300
         ave_alpha = self.alpha / np.mean(self.alpha)
-        # print(ave_alpha)
         p_i = ave_alpha * gauss
-        # print(p_i)
         p_1 = np.sum(p_i, axis=1)
         p_2 = np.sum(p_1)
         log_likelihood = np.log(p_2)
-        print(log_likelihood)
+        # print(log_likelihood)
         return log_likelihood
 
 
@@ -157,7 +165,7 @@ def main():
     np.random.seed(11)
     X = create_toy_data()
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.fit(X, iter_max=25)
+    model.fit(X, iter_max=50)
     labels = model.classify(X)
     x_test, y_test = np.meshgrid(
         np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))

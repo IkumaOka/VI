@@ -47,6 +47,7 @@ class VariationalGaussianMixture(object):
 
     def e_like_step(self, X):
         d = X[:, :, None] - self.m
+        print(self.nu)
         gauss = np.exp(
             -0.5 * self.ndim / self.beta
             - 0.5 * self.nu * np.sum(
