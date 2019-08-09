@@ -27,7 +27,7 @@ class VariationalGaussianMixture(object):
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
         self.log_likelihoods = []
-        self.rho = 0.01
+        self.rho = 1.0
 
     def get_params(self):
         return self.alpha, self.beta, self.m, self.W, self.nu
@@ -36,7 +36,7 @@ class VariationalGaussianMixture(object):
         self.init_params(X)
         for i in range(iter_max):
             params = np.hstack([array.flatten() for array in self.get_params()])
-            rand_X = X[np.random.choice(X.shape[0], 30), :]
+            rand_X = X[np.random.choice(X.shape[0], 80), :]
             r = self.e_like_step(rand_X)
             alpha_, beta_, m_, W_, nu_ = self.m_like_step(rand_X, r)
             self.alpha = self.update_stochastic_param(alpha_, self.alpha, i)
@@ -53,7 +53,7 @@ class VariationalGaussianMixture(object):
 
     def e_like_step(self, X):
         d = X[:, :, None] - self.m
-        print(self.beta)
+        # print(self.beta)
         # gaussの計算でinfが出てくる
         gauss = np.exp(
             -0.5 * self.ndim / self.beta
@@ -61,6 +61,7 @@ class VariationalGaussianMixture(object):
                 np.einsum('ijk,njk->nik', self.W, d) * d,
                 axis=1)
         )
+        gauss[np.isinf(gauss) == True] = 1.0e+10
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
         r = pi * np.sqrt(Lambda) * gauss
@@ -94,7 +95,7 @@ class VariationalGaussianMixture(object):
         return alpha_, beta_, m_, W_, nu_
 
     def update_stochastic_param(self, param_, param, iter):
-        self.rho += 1 / (100 + iter)
+        self.rho = (self.rho + iter) ** (-0.9)
         update_param = (1 - self.rho) * param_ + self.rho * param
         return update_param
 
@@ -136,6 +137,7 @@ class VariationalGaussianMixture(object):
                 axis=1)
         )
         gauss[np.where(gauss == 0)] = 1.0e-300
+        gauss[np.isinf(gauss) == True] = 1.0e+5
         ave_alpha = self.alpha / np.mean(self.alpha)
         p_i = ave_alpha * gauss
         p_1 = np.sum(p_i, axis=1)
@@ -162,10 +164,10 @@ def create_toy_data():
 
 
 def main():
-    np.random.seed(11)
+    np.random.seed(10)
     X = create_toy_data()
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.fit(X, iter_max=50)
+    model.fit(X, iter_max=2000)
     labels = model.classify(X)
     x_test, y_test = np.meshgrid(
         np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
