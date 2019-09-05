@@ -52,7 +52,6 @@ class VariationalGaussianMixture(object):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
             stochastic_r = self.stochastic_cluster(r, self.n_component)
-            print(stochastic_r)
             self.m_like_step(X, stochastic_r)
             a = self.calc_loglikelihood(X)
             self.log_likelihoods.append(a)
@@ -101,7 +100,6 @@ class VariationalGaussianMixture(object):
         m_ = self.m
         W_  = self.W
         nu_ = self.nu
-        # print(self.component_size)
         Xm = X.T.dot(r) / self.component_size
         d = X[:, :, None] - Xm
         S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / self.component_size
@@ -217,7 +215,7 @@ def create_toy_data():
                        [1, 3]]])
     data = []
     for i in range(len(mu)):
-        values = multivariate_normal(mu[i], sigma[i], 100)
+        values = multivariate_normal(mu[i], sigma[i], 1000)
         data.extend(values)
     data = np.array(data)
     return data

@@ -1,17 +1,19 @@
+# vi_stochastic2.pyからコピー
+# 実験は1回だけversion
+
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import digamma, gamma
 from numpy.random import *
+from sklearn.datasets import load_iris
 
 
 class VariationalGaussianMixture(object):
 
-
     def __init__(self, n_component=10, alpha0=1.):
         self.n_component = n_component
         self.alpha0 = alpha0
-
 
     def init_params(self, X):
         self.sample_size, self.ndim = X.shape
@@ -24,55 +26,29 @@ class VariationalGaussianMixture(object):
         self.component_size = self.sample_size / self.n_component + np.zeros(self.n_component)
         self.alpha = self.alpha0 + self.component_size
         self.beta = self.beta0 + self.component_size
-        # indices = np.random.choice(self.sample_size, self.n_component, replace=False)
-        # self.m = X[indices].T
-        self.m = (np.tile(self.m0, (self.n_component, 1)) + np.random.normal(size=(self.n_component, self.ndim))).T
+        indices = np.random.choice(self.sample_size, self.n_component, replace=False)
+        self.m = X[indices].T
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
         self.log_likelihoods = []
-        self.rho = 1.0
-
 
     def get_params(self):
         return self.alpha, self.beta, self.m, self.W, self.nu
 
-
-    def normal_fit(self, X, iter_max=100):
-        self.init_params(X)
-        for i in range(iter_max):
-            params = np.hstack([array.flatten() for array in self.get_params()])
-            r = self.e_like_step(X)
-            self.m_like_step(X, r)
-            a = self.calc_loglikelihood(X)
-            self.log_likelihoods.append(a)
-
-
-    def stochastic_fit(self, X, iter_max=100):
+    def fit(self, X, iter_max=100):
         self.init_params(X)
         for i in range(iter_max):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
             stochastic_r = self.stochastic_cluster(r, self.n_component)
+            # print(stochastic_r)
             self.m_like_step(X, stochastic_r)
             a = self.calc_loglikelihood(X)
             self.log_likelihoods.append(a)
-
-
-    def svi_fit(self, X, iter_max=100):
-        self.init_params(X)
-        for i in range(iter_max):
-            params = np.hstack([array.flatten() for array in self.get_params()])
-            rand_X = X[np.random.choice(X.shape[0], 80), :]
-            r = self.e_like_step(rand_X)
-            alpha_, beta_, m_, W_, nu_ = self.m_like_step(rand_X, r)
-            self.alpha = self.update_stochastic_param(alpha_, self.alpha, i)
-            self.beta = self.update_stochastic_param(beta_, self.beta, i)
-            self.m = self.update_stochastic_param(m_, self.m, i)
-            self.W = self.update_stochastic_param(W_, self.W, i)
-            self.nu = self.update_stochastic_param(nu_, self.nu, i)
-            a = self.calc_loglikelihood(X)
-            self.log_likelihoods.append(a)
-
+            if np.allclose(params, np.hstack([array.ravel() for array in self.get_params()])):
+                break
+        else:
+            print("parameters may not have converged")
 
     def e_like_step(self, X):
         d = X[:, :, None] - self.m
@@ -82,29 +58,22 @@ class VariationalGaussianMixture(object):
                 np.einsum('ijk,njk->nik', self.W, d) * d,
                 axis=1)
         )
-        gauss[np.isinf(gauss) == True] = 1.0e+10
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
         r = pi * np.sqrt(Lambda) * gauss
-        r[np.where(r == 0)] = 1.0e-300
         r /= np.sum(r, axis=-1, keepdims=True)
         r[np.isnan(r)] = 1. / self.n_component
         return r
 
-
     def m_like_step(self, X, r):
         self.component_size = r.sum(axis=0)
         self.component_size[np.where(self.component_size == 0)] = 1.0e-300
-        # (t-1)の変数を保存しておく
-        alpha_ = self.alpha
-        beta_ = self.beta
-        m_ = self.m
-        W_  = self.W
-        nu_ = self.nu
+        # print(self.component_size)
         Xm = X.T.dot(r) / self.component_size
         d = X[:, :, None] - Xm
         S = np.einsum('nik,njk->ijk', d, r[:, None, :] * d) / self.component_size
         self.alpha = self.alpha0 + self.component_size
+
         self.beta = self.beta0 + self.component_size
         self.m = (self.beta0 * self.m0[:, None] + self.component_size * Xm) / self.beta
         d = Xm - self.m0[:, None]
@@ -113,18 +82,6 @@ class VariationalGaussianMixture(object):
             + (self.component_size * S).T
             + (self.beta0 * self.component_size * np.einsum('ik,jk->ijk', d, d) / (self.beta0 + self.component_size)).T).T
         self.nu = self.nu0 + self.component_size
-        return alpha_, beta_, m_, W_, nu_
-
-
-    def update_stochastic_param(self, param_, param, iter):
-        self.rho = (self.rho + iter) ** (-0.9)
-        update_param = (1 - self.rho) * param_ + self.rho * param
-        return update_param
-
-
-    def normal_cluster(self, r):
-            return r
-
 
     def stochastic_cluster(self, r, n_component):
         clusters = list(range(0, n_component))
@@ -138,7 +95,6 @@ class VariationalGaussianMixture(object):
 
         return stochastic_r
 
-
     def predict_proba(self, X):
         covs = self.nu * self.W
         precisions = np.linalg.inv(covs.T).T
@@ -148,10 +104,8 @@ class VariationalGaussianMixture(object):
         gausses *= (self.alpha0 + self.component_size) / (self.n_component * self.alpha0 + self.sample_size)
         return np.sum(gausses, axis=-1)
 
-
     def classify(self, X):
         return np.argmax(self.e_like_step(X), 1)
-
 
     def student_t(self, X):
         nu = self.nu + 1 - self.ndim
@@ -164,6 +118,8 @@ class VariationalGaussianMixture(object):
             * (1 + maha_sq / nu) ** (-0.5 * (nu + self.ndim))
             / (gamma(0.5 * nu) * (nu * np.pi) ** (0.5 * self.ndim)))
 
+    def predict_dist(self, X):
+        return (self.alpha * self.student_t(X)).sum(axis=-1) / self.alpha.sum()
 
     def calc_loglikelihood(self, X):
         d = X[:, :, None] - self.m
@@ -173,39 +129,15 @@ class VariationalGaussianMixture(object):
                 np.einsum('ijk,njk->nik', self.W, d) * d,
                 axis=1)
         )
-        # gauss[np.where(gauss == 0)] = 1.0e-300
-        # gauss[np.isinf(gauss) == True] = 1.0e+5
-        ave_alpha = self.alpha / np.sum(self.alpha)
+        ave_alpha = self.alpha / np.mean(self.alpha)
+        # print(ave_alpha)
         p_i = ave_alpha * gauss
+        # print(p_i)
         p_1 = np.sum(p_i, axis=1)
         p_2 = np.sum(p_1)
         log_likelihood = np.log(p_2)
-        ave_log_likelihood = log_likelihood / X.shape[0]
+        # print(log_likelihood)
         return log_likelihood
-
-
-def svi_clustering(X):
-    model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.svi_fit(X, iter_max=2000)
-    labels = model.classify(X)
-    log_likelihoods = model.log_likelihoods
-    return log_likelihoods
-
-
-def normal_clustering(X):
-    model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.normal_fit(X, iter_max=2000)
-    labels = model.classify(X)
-    log_likelihoods = model.log_likelihoods
-    return log_likelihoods
-
-
-def stochastic_clustering(X):
-    model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.stochastic_fit(X, iter_max=2000)
-    labels = model.classify(X)
-    log_likelihoods = model.log_likelihoods
-    return log_likelihoods
 
 
 def create_toy_data():
@@ -225,20 +157,15 @@ def create_toy_data():
 
 
 def main():
-    np.random.seed(48)
-    X = create_toy_data()
-    print("svi now...")
-    svi_loglikelihoods = svi_clustering(X)
-    print("normal now...")
-    normal_loglikelihoods = normal_clustering(X)
-    print("stochastic now...")
-    stochastic_loglikelihoods = stochastic_clustering(X)
-    plt.plot(svi_loglikelihoods, color='#ffff00', linestyle='solid')
-    plt.plot(normal_loglikelihoods, color='#2971e5', linestyle='solid')
-    plt.plot(stochastic_loglikelihoods, color='#ed3b3b', linestyle='solid')
-    plt.legend(['svi', 'normal', 'stochastic'])
-    plt.show()
-
-
+    np.random.seed(10)
+    # X = create_toy_data()
+    iris = load_iris()
+    model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
+    iter_max = [1000]
+    for iter in iter_max:
+        model.fit(iris.data, iter_max=iter)
+        labels = model.classify(iris.data)
+        print(labels)
+        print(iris.data.target)
 if __name__ == '__main__':
     main()

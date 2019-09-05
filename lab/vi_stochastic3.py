@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import digamma, gamma
 from numpy.random import *
+from sklearn.datasets import load_iris
 
 
 class VariationalGaussianMixture(object):
@@ -157,18 +158,18 @@ def create_toy_data():
 
 def main():
     np.random.seed(10)
-    X = create_toy_data()
+    # X = create_toy_data()
+    iris = load_iris()
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
     iter_max = [1000]
     for iter in iter_max:
-        model.fit(X, iter_max=iter)
-        labels = model.classify(X)
+        model.fit(iris.data, iter_max=iter)
+        labels = model.classify(iris.data)
+        print(labels)
         x_test, y_test = np.meshgrid(
             np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
         X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-        probs = model.predict_dist(X_test)
-        plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
-        # plt.contour(x_test, y_test, probs.reshape(100, 100))
+        plt.scatter(iris.data[:, 0], iris.data[:, 1], c=labels, cmap=cm.get_cmap())
         plt.title(iter)
         save_name = str(iter) + '.png'
         # plt.savefig(save_name, dpi=500)
