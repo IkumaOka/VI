@@ -3,11 +3,12 @@ class BayesianGaussianMixtureModel:
     def __init__(self, K, D, alpha0, beta0, nu0, m0, W0):
         self.K = K
         self.D = D
-        self.alpha0 = alpha0
-        self.beta0 = beta0
-        self.nu0 = nu0
-        self.m0 = m0
-        self.W0 = W0
+        self.alpha0 = 1.0
+        self.beta0 = 1.0
+        self.nu0 = 2.0
+        print(self.nu0.shape)
+        self.m0 = np.zeros(2)
+        self.W0 = np.eye(2)
 
         self.alpha = None
         self.beta = None

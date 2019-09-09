@@ -1,3 +1,4 @@
+# 変分下界の実装
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -115,7 +116,8 @@ class VariationalGaussianMixture(object):
             return -nu/2 * np.log(np.linalg.det(W)) - D/2 * nu * np.log(2) - D* (D - 1)/4 * np.log(np.pi) - gammaln(arg_gamma/2).sum()
         else:
             K, D, _ = Wshape
-            arg_gamma = np.reshape(nu, (K, 1)) - np.reshape(np.arange(0, D, 1), (1, D))
+            arg_gamma = nu, (K, 1) - np.reshape(np.arange(0, D, 1), (1, D))
+            # arg_gamma = np.reshape(nu, (K, 1)) - np.reshape(np.arange(0, D, 1), (1, D))
             return -nu/2 * np.log(np.linalg.det(W)) - D/2 * nu * np.log(2) - D* (D - 1)/4 * np.log(np.pi) - gammaln(arg_gamma/2).sum(axis=1)
 
 
