@@ -30,7 +30,7 @@ class VariationalGaussianMixture(object):
         self.m = (np.tile(self.m0, (self.n_component, 1)) + np.random.normal(size=(self.n_component, self.ndim))).T
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
-        self.log_likelihoods = []
+        self.elbo = []
         self.rho = 1.0
 
 
@@ -45,7 +45,7 @@ class VariationalGaussianMixture(object):
             r = self.e_like_step(X)
             self.m_like_step(X, r)
             a = self.calc_lower_bound(X)
-            self.log_likelihoods.append(a)
+            self.elbo.append(a)
 
 
     def stochastic_fit(self, X, iter_max=100):
@@ -56,7 +56,7 @@ class VariationalGaussianMixture(object):
             stochastic_r = self.stochastic_cluster(r, self.n_component)
             self.m_like_step(X, stochastic_r)
             a = self.calc_lower_bound(X)
-            self.log_likelihoods.append(a)
+            self.elbo.append(a)
 
 
     def svi_fit(self, X, iter_max=100):
@@ -72,7 +72,7 @@ class VariationalGaussianMixture(object):
             self.W = self.update_stochastic_param(W_, self.W, i)
             self.nu = self.update_stochastic_param(nu_, self.nu, i)
             a = self.calc_lower_bound(X)
-            self.log_likelihoods.append(a)
+            self.elbo.append(a)
 
 
     def e_like_step(self, X):
@@ -180,24 +180,24 @@ def svi_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
     model.svi_fit(X, iter_max=2000)
     labels = model.classify(X)
-    log_likelihoods = model.log_likelihoods
-    return log_likelihoods
+    elbo = model.elbo
+    return elbo
 
 
 def normal_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
     model.normal_fit(X, iter_max=2000)
     labels = model.classify(X)
-    log_likelihoods = model.log_likelihoods
-    return log_likelihoods
+    elbo = model.elbo
+    return elbo
 
 
 def stochastic_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
     model.stochastic_fit(X, iter_max=2000)
     labels = model.classify(X)
-    log_likelihoods = model.log_likelihoods
-    return log_likelihoods
+    elbo = model.elbo
+    return elbo
 
 
 def create_toy_data():
@@ -218,7 +218,7 @@ def create_toy_data():
 
 def main():
     # np.random.seed(48)
-    np.random.seed(5)
+    np.random.seed(6)
     X = create_toy_data()
     print("svi now...")
     svi_loglikelihoods = svi_clustering(X)
