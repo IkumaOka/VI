@@ -1,7 +1,7 @@
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.special import digamma, gamma
+from scipy.special import digamma, gamma, gammaln
 from numpy.random import *
 
 
@@ -14,6 +14,7 @@ class VariationalGaussianMixture(object):
 
 
     def init_params(self, X):
+        self.D = 2
         self.sample_size, self.ndim = X.shape
         self.alpha0 = np.ones(self.n_component) * self.alpha0
         self.m0 = np.zeros(self.ndim)
@@ -43,7 +44,7 @@ class VariationalGaussianMixture(object):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
             self.m_like_step(X, r)
-            a = self.calc_loglikelihood(X)
+            a = self.calc_lower_bound(X)
             self.log_likelihoods.append(a)
 
 
@@ -54,7 +55,7 @@ class VariationalGaussianMixture(object):
             r = self.e_like_step(X)
             stochastic_r = self.stochastic_cluster(r, self.n_component)
             self.m_like_step(X, stochastic_r)
-            a = self.calc_loglikelihood(X)
+            a = self.calc_lower_bound(X)
             self.log_likelihoods.append(a)
 
 
@@ -70,7 +71,7 @@ class VariationalGaussianMixture(object):
             self.m = self.update_stochastic_param(m_, self.m, i)
             self.W = self.update_stochastic_param(W_, self.W, i)
             self.nu = self.update_stochastic_param(nu_, self.nu, i)
-            a = self.calc_loglikelihood(X)
+            a = self.calc_lower_bound(X)
             self.log_likelihoods.append(a)
 
 
@@ -139,47 +140,40 @@ class VariationalGaussianMixture(object):
         return stochastic_r
 
 
-    def predict_proba(self, X):
-        covs = self.nu * self.W
-        precisions = np.linalg.inv(covs.T).T
-        d = X[:, :, None] - self.m
-        exponents = np.sum(np.einsum('nik,ijk->njk', d, precisions) * d, axis=1)
-        gausses = np.exp(-0.5 * exponents) / np.sqrt(np.linalg.det(covs.T).T * (2 * np.pi) ** self.ndim)
-        gausses *= (self.alpha0 + self.component_size) / (self.n_component * self.alpha0 + self.sample_size)
-        return np.sum(gausses, axis=-1)
-
-
     def classify(self, X):
         return np.argmax(self.e_like_step(X), 1)
 
 
-    def student_t(self, X):
-        nu = self.nu + 1 - self.ndim
-        L = nu * self.beta * self.W / (1 + self.beta)
-        d = X[:, :, None] - self.m
-        maha_sq = np.sum(np.einsum('nik,ijk->njk', d, L) * d, axis=1)
-        return (
-            gamma(0.5 * (nu + self.ndim))
-            * np.sqrt(np.linalg.det(L.T))
-            * (1 + maha_sq / nu) ** (-0.5 * (nu + self.ndim))
-            / (gamma(0.5 * nu) * (nu * np.pi) ** (0.5 * self.ndim)))
+    def calc_lower_bound(self, r):
+        a = - (r * np.log(r)).sum()
+        b = self.logC(self.alpha0)
+        c = self.logC(self.alpha)
+        d = (np.log(self.beta0) - np.log(self.beta.sum())) * self.D / 2
+        # e = self.logB(self.W0, self.nu0)
+        f = self.logB(self.W, self.nu)
+        return - (r * np.log(r)).sum() + \
+            self.logC(self.alpha0*np.ones(self.n_component)) - self.logC(self.alpha) +\
+            self.D/2 * (self.n_component * np.log(self.beta0) - np.log(self.beta).sum()) + \
+            self.n_component * self.logB(self.W0, self.nu0) - self.logB(self.W, self.nu).sum()
 
 
-    def calc_loglikelihood(self, X):
-        d = X[:, :, None] - self.m
-        gauss = np.exp(
-            -0.5 * self.ndim / self.beta
-            - 0.5 * self.nu * np.sum(
-                np.einsum('ijk,njk->nik', self.W, d) * d,
-                axis=1)
-        )
-        ave_alpha = self.alpha / np.sum(self.alpha)
-        p_i = ave_alpha * gauss
-        p_1 = np.sum(p_i, axis=1)
-        p_2 = np.sum(p_1)
-        log_likelihood = np.log(p_2)
-        ave_log_likelihood = log_likelihood / X.shape[0]
-        return log_likelihood
+    def logC(self, alpha):
+        return gammaln(alpha.sum()) - gammaln(alpha).sum()
+
+
+    def logB(self, W, nu):
+        Wshape = W.T.shape
+        if len(Wshape) == 2:
+            D, _ = Wshape
+            arg_gamma = nu - np.arange(0, D, 1)
+            return -nu/2 * np.log(np.linalg.det(W)) - D/2 * nu * np.log(2) - D* (D - 1)/4 * np.log(np.pi) - gammaln(arg_gamma/2).sum()
+        else:
+            # K, D, elm = Wshape
+            # arg_gamma = nu - np.reshape(np.arange(0, D, 1), (1, elm))
+            # arg_gamma = nu - np.arange(1, elm+1, 1)
+            K, D, _ = Wshape
+            arg_gamma = np.reshape(nu, (K, 1)) - np.reshape(np.arange(0, D, 1), (1, D))
+            return -nu/2 * np.log(np.linalg.det(W.T)) - D/2 * nu * np.log(2) - D* (D - 1)/4 * np.log(np.pi) - gammaln(arg_gamma/2).sum(axis=1)
 
 
 def svi_clustering(X):
@@ -223,7 +217,8 @@ def create_toy_data():
 
 
 def main():
-    np.random.seed(48)
+    # np.random.seed(48)
+    np.random.seed(5)
     X = create_toy_data()
     print("svi now...")
     svi_loglikelihoods = svi_clustering(X)
