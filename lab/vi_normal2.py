@@ -95,30 +95,40 @@ class VariationalGaussianMixture(object):
             return r
 
 
-
     def classify(self, X):
         return np.argmax(self.e_like_step(X), 1)
 
+
     def calc_lower_bound(self, r):
+        a = - (r * np.log(r)).sum()
+        b = self.logC(self.alpha0)
+        c = self.logC(self.alpha)
+        d = (np.log(self.beta0) - np.log(self.beta.sum())) * self.D / 2
+        # e = self.logB(self.W0, self.nu0)
+        f = self.logB(self.W, self.nu)
         return - (r * np.log(r)).sum() + \
             self.logC(self.alpha0*np.ones(self.n_component)) - self.logC(self.alpha) +\
             self.D/2 * (self.n_component * np.log(self.beta0) - np.log(self.beta).sum()) + \
             self.n_component * self.logB(self.W0, self.nu0) - self.logB(self.W, self.nu).sum()
 
+
     def logC(self, alpha):
         return gammaln(alpha.sum()) - gammaln(alpha).sum()
 
+
     def logB(self, W, nu):
-        Wshape = W.shape
+        Wshape = W.T.shape
         if len(Wshape) == 2:
             D, _ = Wshape
             arg_gamma = nu - np.arange(0, D, 1)
             return -nu/2 * np.log(np.linalg.det(W)) - D/2 * nu * np.log(2) - D* (D - 1)/4 * np.log(np.pi) - gammaln(arg_gamma/2).sum()
         else:
+            # K, D, elm = Wshape
+            # arg_gamma = nu - np.reshape(np.arange(0, D, 1), (1, elm))
+            # arg_gamma = nu - np.arange(1, elm+1, 1)
             K, D, _ = Wshape
-            arg_gamma = nu, (K, 1) - np.reshape(np.arange(0, D, 1), (1, D))
-            # arg_gamma = np.reshape(nu, (K, 1)) - np.reshape(np.arange(0, D, 1), (1, D))
-            return -nu/2 * np.log(np.linalg.det(W)) - D/2 * nu * np.log(2) - D* (D - 1)/4 * np.log(np.pi) - gammaln(arg_gamma/2).sum(axis=1)
+            arg_gamma = np.reshape(nu, (K, 1)) - np.reshape(np.arange(0, D, 1), (1, D))
+            return -nu/2 * np.log(np.linalg.det(W.T)) - D/2 * nu * np.log(2) - D* (D - 1)/4 * np.log(np.pi) - gammaln(arg_gamma/2).sum(axis=1)
 
 
 
