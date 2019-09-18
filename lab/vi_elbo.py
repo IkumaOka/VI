@@ -44,7 +44,7 @@ class VariationalGaussianMixture(object):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
             self.m_like_step(X, r)
-            a = self.calc_lower_bound(X)
+            a = self.calc_lower_bound(r)
             self.elbo.append(a)
 
 
@@ -55,7 +55,7 @@ class VariationalGaussianMixture(object):
             r = self.e_like_step(X)
             stochastic_r = self.stochastic_cluster(r, self.n_component)
             self.m_like_step(X, stochastic_r)
-            a = self.calc_lower_bound(X)
+            a = self.calc_lower_bound(r)
             self.elbo.append(a)
 
 
@@ -66,12 +66,14 @@ class VariationalGaussianMixture(object):
             rand_X = X[np.random.choice(X.shape[0], 80), :]
             r = self.e_like_step(rand_X)
             alpha_, beta_, m_, W_, nu_ = self.m_like_step(rand_X, r)
+            self.rho = (self.rho + i) ** (-0.9)
             self.alpha = self.update_stochastic_param(alpha_, self.alpha, i)
             self.beta = self.update_stochastic_param(beta_, self.beta, i)
             self.m = self.update_stochastic_param(m_, self.m, i)
             self.W = self.update_stochastic_param(W_, self.W, i)
             self.nu = self.update_stochastic_param(nu_, self.nu, i)
-            a = self.calc_lower_bound(X)
+            all_r = self.e_like_step(X)
+            a = self.calc_lower_bound(all_r)
             self.elbo.append(a)
 
 
@@ -83,7 +85,7 @@ class VariationalGaussianMixture(object):
                 np.einsum('ijk,njk->nik', self.W, d) * d,
                 axis=1)
         )
-        gauss[np.isinf(gauss) == True] = 1.0e+10
+        # gauss[np.isinf(gauss) == True] = 1.0e+10
         pi = np.exp(digamma(self.alpha) - digamma(self.alpha.sum()))
         Lambda = np.exp(digamma(self.nu - np.arange(self.ndim)[:, None]).sum(axis=0) + self.ndim * np.log(2) + np.linalg.slogdet(self.W.T)[1])
         r = pi * np.sqrt(Lambda) * gauss
@@ -118,7 +120,6 @@ class VariationalGaussianMixture(object):
 
 
     def update_stochastic_param(self, param_, param, iter):
-        self.rho = (self.rho + iter) ** (-0.9)
         update_param = (1 - self.rho) * param_ + self.rho * param
         return update_param
 
@@ -146,6 +147,8 @@ class VariationalGaussianMixture(object):
 
     def calc_lower_bound(self, r):
         a = - (r * np.log(r)).sum()
+        # print(r * np.log(r))
+        # print(a)
         b = self.logC(self.alpha0)
         c = self.logC(self.alpha)
         d = (np.log(self.beta0) - np.log(self.beta.sum())) * self.D / 2
@@ -178,7 +181,7 @@ class VariationalGaussianMixture(object):
 
 def svi_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.svi_fit(X, iter_max=2000)
+    model.svi_fit(X, iter_max=1000)
     labels = model.classify(X)
     elbo = model.elbo
     return elbo
@@ -186,7 +189,7 @@ def svi_clustering(X):
 
 def normal_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.normal_fit(X, iter_max=2000)
+    model.normal_fit(X, iter_max=1000)
     labels = model.classify(X)
     elbo = model.elbo
     return elbo
@@ -194,7 +197,7 @@ def normal_clustering(X):
 
 def stochastic_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.stochastic_fit(X, iter_max=2000)
+    model.stochastic_fit(X, iter_max=1000)
     labels = model.classify(X)
     elbo = model.elbo
     return elbo
