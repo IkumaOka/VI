@@ -26,4 +26,7 @@ def create_toy_data():
 
 np.random.seed(6)
 X = create_toy_data()
-print(X.shape)
+gmm = BayesianGaussianMixture(n_components=10, verbose=1, max_iter=1000)
+lower_bounds = gmm.fit(X)[1][1]
+plt.plot(lower_bounds, color='#ffff00', linestyle='solid')
+plt.show()
