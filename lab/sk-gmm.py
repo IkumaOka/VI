@@ -5,6 +5,7 @@ from scipy.special import digamma, gamma, gammaln
 from numpy.random import *
 from sklearn.mixture import BayesianGaussianMixture
 from sklearn.mixture_stochastic import BayesianGaussianMixtureStochastic
+from sklearn.mixture_sgd import BayesianGaussianMixtureSgd
 
 
 def create_toy_data():
@@ -24,14 +25,17 @@ def create_toy_data():
 
 np.random.seed(6)
 X = create_toy_data()
-normal
-gmm = BayesianGaussianMixture(n_components=10, verbose=1, max_iter=1000)
-lower_bounds = gmm.fit(X)[1][1]
+# normal
+# gmm = BayesianGaussianMixture(n_components=10, verbose=1, max_iter=1000)
+# lower_bounds = gmm.fit(X)[1][1]
 # #ffff00は黄色
-plt.plot(lower_bounds, color='#ffff00', linestyle='solid')
+# plt.plot(lower_bounds, color='#ffff00', linestyle='solid')
 
 # stochastic
-stochastic_gmm = BayesianGaussianMixtureStochastic(n_components=10, verbose=1, max_iter=1000)
-stochastic_lower_bounds = stochastic_gmm.fit(X)[1][1]
+# stochastic_gmm = BayesianGaussianMixtureStochastic(n_components=10, verbose=1, max_iter=1000)
+# stochastic_lower_bounds = stochastic_gmm.fit(X)[1][1]
 # plt.plot(stochastic_lower_bounds, color='#2971e5', linestyle='solid')
-plt.show()
+# plt.show()
+
+# sgd
+sgd_gmm = BayesianGaussianMixtureSgd(n_components=10, verbose=1, max_iter=1000)
