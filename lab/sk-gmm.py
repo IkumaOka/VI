@@ -30,12 +30,13 @@ X = create_toy_data()
 # lower_bounds = gmm.fit(X)[1][1]
 # #ffff00は黄色
 # plt.plot(lower_bounds, color='#ffff00', linestyle='solid')
+# plt.show()
 
 # stochastic
-# stochastic_gmm = BayesianGaussianMixtureStochastic(n_components=10, verbose=1, max_iter=1000)
-# stochastic_lower_bounds = stochastic_gmm.fit(X)[1][1]
-# plt.plot(stochastic_lower_bounds, color='#2971e5', linestyle='solid')
-# plt.show()
+stochastic_gmm = BayesianGaussianMixtureStochastic(n_components=10, verbose=1, max_iter=1000)
+stochastic_lower_bounds = stochastic_gmm.fit(X)[1][1]
+plt.plot(stochastic_lower_bounds, color='#2971e5', linestyle='solid')
+plt.show()
 
 # sgd
 sgd_gmm = BayesianGaussianMixtureSgd(n_components=10, verbose=1, max_iter=1000)
