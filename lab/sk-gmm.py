@@ -39,7 +39,7 @@ X = create_toy_data()
 # plt.show()
 
 # sgd
-sgd_gmm = BayesianGaussianMixtureSgd(n_components=10, verbose=1, max_iter=1)
+sgd_gmm = BayesianGaussianMixtureSgd(n_components=10, verbose=1, max_iter=1000)
 sgd_lower_bounds = sgd_gmm.fit(X)[1][1]
 plt.plot(sgd_lower_bounds, color='#2971e5', linestyle='solid')
 plt.show()
