@@ -24,9 +24,9 @@ class VariationalGaussianMixture(object):
         self.component_size = self.sample_size / self.n_component + np.zeros(self.n_component)
         self.alpha = self.alpha0 + self.component_size
         self.beta = self.beta0 + self.component_size
-        # indices = np.random.choice(self.sample_size, self.n_component, replace=False)
-        # self.m = X[indices].T
-        self.m = (np.tile(self.m0, (self.n_component, 1)) + np.random.normal(size=(self.n_component, self.ndim))).T
+        indices = np.random.choice(self.sample_size, self.n_component, replace=False)
+        self.m = X[indices].T
+        # self.m = (np.tile(self.m0, (self.n_component, 1)) + np.random.normal(size=(self.n_component, self.ndim))).T
         self.W = np.tile(self.W0, (self.n_component, 1, 1)).T
         self.nu = self.nu0 + self.component_size
         self.log_likelihoods = []
@@ -223,19 +223,27 @@ def create_toy_data():
 
 
 def main():
-    np.random.seed(48)
-    X = create_toy_data()
-    print("svi now...")
-    svi_loglikelihoods = svi_clustering(X)
-    print("normal now...")
-    normal_loglikelihoods = normal_clustering(X)
-    print("stochastic now...")
-    stochastic_loglikelihoods = stochastic_clustering(X)
-    plt.plot(svi_loglikelihoods, color='#ffff00', linestyle='solid')
-    plt.plot(normal_loglikelihoods, color='#2971e5', linestyle='solid')
-    plt.plot(stochastic_loglikelihoods, color='#ed3b3b', linestyle='solid')
-    plt.legend(['svi', 'normal', 'stochastic'])
-    plt.show()
+    seeds = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+             41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+             51, 52, 53, 54, 55, 56, 57, 58, 59, 60]
+    for i in seeds:
+        print(i)
+        np.random.seed(i)
+        # np.random.seed(48)
+        X = create_toy_data()
+        print("svi now...")
+        svi_loglikelihoods = svi_clustering(X)
+        print("normal now...")
+        normal_loglikelihoods = normal_clustering(X)
+        print("stochastic now...")
+        stochastic_loglikelihoods = stochastic_clustering(X)
+        plt.figure()
+        plt.plot(normal_loglikelihoods, color='#2971e5', linestyle='solid')
+        plt.plot(svi_loglikelihoods, color='#ffff00', linestyle='solid')
+        plt.plot(stochastic_loglikelihoods, color='#ed3b3b', linestyle='solid')
+        plt.legend(['VI', 'SGD+VI', 'SEM+VI'])
+        save_name = str(i) + '.png'
+        plt.savefig(save_name, dpi=500)
 
 
 if __name__ == '__main__':

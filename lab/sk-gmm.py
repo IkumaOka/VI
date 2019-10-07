@@ -4,8 +4,9 @@ import numpy as np
 from scipy.special import digamma, gamma, gammaln
 from numpy.random import *
 from sklearn.mixture import BayesianGaussianMixture
+from sklearn.mixture import BayesianGaussianMixtureSgd
 from sklearn.mixture_stochastic import BayesianGaussianMixtureStochastic
-from sklearn.mixture_sgd import BayesianGaussianMixtureSgd
+# from sklearn.mixture_sgd import BayesianGaussianMixtureSgd
 
 
 def create_toy_data():
@@ -41,5 +42,5 @@ X = create_toy_data()
 # sgd
 sgd_gmm = BayesianGaussianMixtureSgd(n_components=10, verbose=1, max_iter=1000)
 sgd_lower_bounds = sgd_gmm.fit(X)[1][1]
-plt.plot(sgd_lower_bounds, color='#2971e5', linestyle='solid')
-plt.show()
+# plt.plot(sgd_lower_bounds, color='#2971e5', linestyle='solid')
+# plt.show()
