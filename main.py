@@ -1,6 +1,5 @@
-# クラスタリング結果を表示する（元はvi.py）
+# vi，sem+vi，sviの3種類を実行
 import matplotlib.cm as cm
-import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import digamma, gamma
@@ -41,27 +40,12 @@ class VariationalGaussianMixture(object):
 
     def normal_fit(self, X, iter_max=100):
         self.init_params(X)
-        color_map = cm.get_cmap('jet', 10)
         for i in range(iter_max):
             params = np.hstack([array.flatten() for array in self.get_params()])
             r = self.e_like_step(X)
             self.m_like_step(X, r)
-            labels = self.classify(X)
-            # print(self.m.shape)
-            # print(X.shape)
-            print(i)
-            print(labels)
-            x_test, y_test = np.meshgrid(
-                np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
-            X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-            # plt.figure()
-            plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=color_map)
-            plt.scatter(self.m[0, :], self.m[1, :], c=list(range(0, self.n_component)), cmap=color_map, marker="x")
-            save_name = str(i) + '.png'
-            plt.savefig(save_name, dpi=500)
-            plt.close()
-            # a = self.calc_loglikelihood(X)
-            # self.log_likelihoods.append(a)
+            a = self.calc_loglikelihood(X)
+            self.log_likelihoods.append(a)
 
 
     def stochastic_fit(self, X, iter_max=100):
@@ -71,15 +55,8 @@ class VariationalGaussianMixture(object):
             r = self.e_like_step(X)
             stochastic_r = self.stochastic_cluster(r, self.n_component)
             self.m_like_step(X, stochastic_r)
-            labels = self.classify(X)
-            x_test, y_test = np.meshgrid(
-                np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
-            X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-            plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
-            save_name = str(i) + '.png'
-            plt.savefig(save_name, dpi=500)
-            # a = self.calc_loglikelihood(X)
-            # self.log_likelihoods.append(a)
+            a = self.calc_loglikelihood(X)
+            self.log_likelihoods.append(a)
 
 
     def svi_fit(self, X, iter_max=100):
@@ -94,15 +71,8 @@ class VariationalGaussianMixture(object):
             self.m = self.update_stochastic_param(m_, self.m, i)
             self.W = self.update_stochastic_param(W_, self.W, i)
             self.nu = self.update_stochastic_param(nu_, self.nu, i)
-            labels = self.classify(X)
-            x_test, y_test = np.meshgrid(
-                np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
-            X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-            plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
-            save_name = str(i) + '.png'
-            plt.savefig(save_name, dpi=500)
-            # a = self.calc_loglikelihood(X)
-            # self.log_likelihoods.append(a)
+            a = self.calc_loglikelihood(X)
+            self.log_likelihoods.append(a)
 
 
     def e_like_step(self, X):
@@ -204,47 +174,37 @@ class VariationalGaussianMixture(object):
                 np.einsum('ijk,njk->nik', self.W, d) * d,
                 axis=1)
         )
-        gauss[np.where(gauss == 0)] = 1.0e-300
-        gauss[np.isinf(gauss) == True] = 1.0e+5
-        ave_alpha = self.alpha / np.mean(self.alpha)
+        ave_alpha = self.alpha / np.sum(self.alpha)
         p_i = ave_alpha * gauss
         p_1 = np.sum(p_i, axis=1)
         p_2 = np.sum(p_1)
         log_likelihood = np.log(p_2)
         ave_log_likelihood = log_likelihood / X.shape[0]
-        return ave_log_likelihood
-
-def normal_clustering(X):
-    model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.normal_fit(X, iter_max=100)
-    # labels = model.classify(X)
-    # x_test, y_test = np.meshgrid(
-    #     np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
-    # X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-    # plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
-    # plt.show()
+        return log_likelihood
 
 
 def svi_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.svi_fit(X, iter_max=100)
-    # labels = model.classify(X)
-    # x_test, y_test = np.meshgrid(
-    #     np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
-    # X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-    # plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
-    # plt.show()
+    model.svi_fit(X, iter_max=2000)
+    labels = model.classify(X)
+    log_likelihoods = model.log_likelihoods
+    return log_likelihoods
+
+
+def normal_clustering(X):
+    model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
+    model.normal_fit(X, iter_max=2000)
+    labels = model.classify(X)
+    log_likelihoods = model.log_likelihoods
+    return log_likelihoods
 
 
 def stochastic_clustering(X):
     model = VariationalGaussianMixture(n_component=10, alpha0=0.01)
-    model.stochastic_fit(X, iter_max=100)
+    model.stochastic_fit(X, iter_max=2000)
     labels = model.classify(X)
-    x_test, y_test = np.meshgrid(
-        np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
-    X_test = np.array([x_test, y_test]).reshape(2, -1).transpose()
-    plt.scatter(X[:, 0], X[:, 1], c=labels, cmap=cm.get_cmap())
-    plt.show()
+    log_likelihoods = model.log_likelihoods
+    return log_likelihoods
 
 
 def create_toy_data():
@@ -257,21 +217,32 @@ def create_toy_data():
                        [1, 3]]])
     data = []
     for i in range(len(mu)):
-        values = multivariate_normal(mu[i], sigma[i], 500)
+        values = multivariate_normal(mu[i], sigma[i], 100)
         data.extend(values)
     data = np.array(data)
     return data
 
 
 def main():
-    np.random.seed(4)
-    X = create_toy_data()
-    print("normal now...")
-    normal_clustering(X)
-    # print("svi now...")
-    # svi_clustering(X)
-    # print("stochastic now...")
-    # stochastic_clustering(X)
+    seeds = [31, 32]
+    for i in seeds:
+        print(i)
+        np.random.seed(i)
+        # np.random.seed(48)
+        X = create_toy_data()
+        print("svi now...")
+        svi_loglikelihoods = svi_clustering(X)
+        print("normal now...")
+        normal_loglikelihoods = normal_clustering(X)
+        print("stochastic now...")
+        stochastic_loglikelihoods = stochastic_clustering(X)
+        plt.figure()
+        plt.plot(normal_loglikelihoods, color='#2971e5', linestyle='solid')
+        plt.plot(svi_loglikelihoods, color='#ffff00', linestyle='solid')
+        plt.plot(stochastic_loglikelihoods, color='#ed3b3b', linestyle='solid')
+        plt.legend(['VI', 'SGD+VI', 'SEM+VI'])
+        save_name = str(i) + '.png'
+        plt.savefig(save_name, dpi=500)
 
 
 if __name__ == '__main__':

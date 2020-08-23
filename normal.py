@@ -1,5 +1,4 @@
-# プログラムの高速化目当て
-# 本体はva_ga_mix_2.py
+# 通常の変分ベイズ法
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
